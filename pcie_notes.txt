@@ -1,0 +1,180 @@
+PCI vendor ID and device ID:
+Devices on the PCI bus are identified by a combination of a vendor ID (assigned by the PCI SIG) and device ID
+(assigned by the vendor).
+https://pci-ids.ucw.cz/read/PC?restrict=1
+/usr/share/hwdata/pci.ids
+
+Examples:
+1000    Broadcom / LSI
+    0072        SAS2008 PCI-Express Fusion-MPT SAS-2 [Falcon]
+    00c8	SAS3316 PCI-Express Fusion-MPT SAS-3
+1a03    ASPEED Technology, Inc.
+    1150        AST1150 PCI-to-PCI Bridge
+    2000        ASPEED Graphics Family
+144d    Samsung Electronics Co Ltd
+    a804        NVMe SSD Controller SM961/PM961
+15b3    Mellanox Technologies
+15ad    VMware
+8086    Intel Corporation
+
+PCI addressing scheme:
+device (0-31), function (0-7), register (0-255)
+Each device can have up to seven logical functions, each one with a configuration address space (CAS) of 256 bytes.
+
+lspci:
+The first field is the slot information in this format: [domain:]bus:device.function
+PCI domain: each domain can contain up to 256 PCI buses
+Buses: 0 to ff (0-255)
+Devices 00 to 1f (0-31)
+Functions: 1 to 7
+
+PCI addressing scheme: device (0-31), function (0-7), register (0-255).
+Each device can have up to seven logical functions, each one with a configuration address space (CAS) of 256 bytes.
+
+# lspci
+00:00.0 Host bridge: Intel Corporation 5500 I/O Hub to ESI Port (rev 13)
+
+# Machine readable format
+# lspci -m
+00:00.0 "Host bridge" "Intel Corporation" "5500 I/O Hub to ESI Port" -r13 "Dell" "PowerEdge R610 I/O Hub to ESI Port"
+
+# Output in tree format
+# lspci -t
+# lspci -tv
+
+# Verbose mode
+# lspci -v
+# lspci -vv
+# lspci -vvv
+
+# Key-value pair
+# lspci -vm
+Device:	00:00.0
+Class:	Host bridge
+Vendor:	Intel Corporation
+Device:	Sky Lake-E DMI3 Registers
+SVendor:	Intel Corporation
+SDevice:	Sky Lake-E DMI3 Registers
+Rev:	04
+NUMANode:	0
+# lspci -vmm
+Slot:	00:00.0
+Class:	Host bridge
+Vendor:	Intel Corporation
+Device:	Sky Lake-E DMI3 Registers
+SVendor:	Intel Corporation
+SDevice:	Sky Lake-E DMI3 Registers
+Rev:	04
+NUMANode:	0
+# lspci -vmms 00:00.0
+Slot:	00:00.0
+Class:	Host bridge
+Vendor:	Intel Corporation
+Device:	Sky Lake-E DMI3 Registers
+SVendor:	Intel Corporation
+SDevice:	Sky Lake-E DMI3 Registers
+Rev:	04
+NUMANode:	0
+
+# Display code instead
+# lspci -n -vmm
+Slot:	00:00.0
+Class:	0600
+Vendor:	8086
+Device:	2020
+SVendor:	8086
+SDevice:	0000
+Rev:	04
+NUMANode:	0
+
+# Get PCI vendorID:deviceID
+# lspci -n
+01:00.1 0200: 14e4:1639 (rev 20)
+
+# Include description too
+# lspci -nn
+01:00.0 Ethernet controller [0200]: Broadcom Corporation NetXtreme II BCM5709 Gigabit Ethernet [14e4:1639] (rev 20)
+
+# For specific device
+# lspci -s 03:00.0
+03:00.0 RAID bus controller: LSI Logic / Symbios Logic MegaRAID SAS 2108 [Liberator] (rev 05)
+# lspci -d 1000:0079
+03:00.0 RAID bus controller: LSI Logic / Symbios Logic MegaRAID SAS 2108 [Liberator] (rev 05)
+# lspci -d 1000:
+03:00.0 RAID bus controller: LSI Logic / Symbios Logic MegaRAID SAS 2108 [Liberator] (rev 05)
+# lspci -d :0079
+03:00.0 RAID bus controller: LSI Logic / Symbios Logic MegaRAID SAS 2108 [Liberator] (rev 05)
+
+# Display kernel driver
+# lspci -k
+00:04.0 System peripheral: Intel Corporation Sky Lake-E CBDMA Registers (rev 04)
+	Subsystem: Intel Corporation Sky Lake-E CBDMA Registers
+	Kernel driver in use: ioatdma
+	Kernel modules: ioatdma
+# lspci -ks 00:04.0
+00:04.0 System peripheral: Intel Corporation Sky Lake-E CBDMA Registers (rev 04)
+	Subsystem: Intel Corporation Sky Lake-E CBDMA Registers
+	Kernel driver in use: ioatdma
+	Kernel modules: ioatdma
+
+# Graphics processor
+# lspci -v | grep -i vga
+02:00.0 VGA compatible controller: ASPEED Technology, Inc. ASPEED Graphics Family (rev 41) (prog-if 00 [VGA controller])
+
+# Audio device
+# lspci -v | grep -i audio
+
+# USB device
+# lspci -v | grep -i usb 
+
+# SAS device
+# lspci | grep -i sas
+# lspci | grep -P --max-count=1 --only-matching "(SAS-2|SAS-3)"
+
+# Ethernet controller
+# lspci -vmm | grep -B1 -A2 '^Class.*Ethernet'
+Slot:	3d:00.0
+Class:	Ethernet controller
+Vendor:	Intel Corporation
+Device:	Ethernet Connection X722 for 1GbE
+
+# Non-Intel device
+# lspci -nn | grep -v 8086
+
+# for file in $(ls /sys/bus/pci/devices/*/numa_node); do echo -n "$file: "; cat $file; done
+/sys/bus/pci/devices/0000:00:00.0/numa_node: 0
+......
+/sys/bus/pci/devices/0000:80:04.0/numa_node: 1
+......
+
+# PCIe AER
+https://www.kernel.org/doc/html/latest/PCI/pcieaer-howto.html
+
+# PCIe device AER stats
+https://www.kernel.org/doc/Documentation/ABI/testing/sysfs-bus-pci-devices-aer_stats
+
+# PCIe AER error injection
+https://git.kernel.org/pub/scm/linux/kernel/git/gong.chen/aer-inject.git/
+
+# find /sys/devices/ -name aer_rootport_total_err_fatal
+/sys/devices/pci0000:5d/0000:5d:00.0/aer_rootport_total_err_fatal
+# find /sys/devices/ -name aer_rootport_total_err_fatal | awk -F/ '{print $5}'
+0000:5d:00.0
+# for slot in $(find /sys/devices/ -name aer_rootport_total_err_fatal | awk -F/ '{print $5}'); do lspci -s $slot; done
+5d:00.0 PCI bridge: Intel Corporation Sky Lake-E PCI Express Root Port A (rev 04)
+
+# find /sys/devices/ -name aer_rootport_total_err_nonfatal
+/sys/devices/pci0000:5d/0000:5d:00.0/aer_rootport_total_err_nonfatal
+# find /sys/devices/ -name aer_rootport_total_err_cor
+/sys/devices/pci0000:5d/0000:5d:00.0/aer_rootport_total_err_cor
+
+# find /sys/devices/ -name aer_dev_fatal
+/sys/devices/pci0000:5d/0000:5d:00.0/0000:5e:00.0/aer_dev_fatal
+# find /sys/devices/ -name aer_dev_nonfatal
+/sys/devices/pci0000:5d/0000:5d:00.0/0000:5e:00.0/aer_dev_nonfatal
+# find /sys/devices/ -name aer_dev_correctable
+/sys/devices/pci0000:5d/0000:5d:00/0000:5e:00.0/aer_dev_correctable
+
+# for file in $(find /sys/devices -name aer_dev_fatal); do echo -n "$file: "; cat $file; done
+
+
