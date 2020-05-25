@@ -1,0 +1,119 @@
+# Start/stop/restart iptables
+systemctl start iptables
+systemctl stop iptables
+systemctl restart iptables
+
+# Per iptables manual, there are currently 3 types of tables:
+FILTER – this is the default table, which contains the built in chains for:
+    INPUT  – packages destined for local sockets
+    FORWARD – packets routed through the system
+    OUTPUT – packets generated locally
+NAT – a table that is consulted when a packet tries to create a new connection. It has the following built-in:
+    PREROUTING – used for altering a packet as soon as it’s received
+    OUTPUT – used for altering locally generated packets
+    POSTROUTING – used for altering packets as they are about to go out
+MANGLE – this table is used for packet altering. Until kernel version 2.4 this table had only two chains, but they are now 5:
+    PREROUTING – for altering incoming connections
+    OUTPUT – for altering locally generated  packets
+    INPUT – for incoming packets
+    POSTROUTING – for altering packets as they are about to go out
+    FORWARD – for packets routed through the box
+
+# Options:
+–A ––append – Add a rule to a chain (at the end).
+–C ––check – Look for a rule that matches the chain’s requirements.
+–D ––delete – Remove specified rules from a chain.
+–F ––flush – Remove all rules.
+–I ––insert – Add a rule to a chain at a given position.
+–L ––list – Show all rules in a chain.
+–N ––new–chain – Create a new chain.
+–v ––verbose – Show more information when using a list option.
+–X ––delete–chain – Delete the provided chain.
+
+# List the currently configured iptables rules: List
+iptables -L     # -v: packet and byte info; -n: hostnames, protocols, and networks are listed as numbers
+iptables -L | grep policy
+
+# Clear the packet and byte info
+iptables -Z
+iptables -Z INPUT     # Add chain
+iptables -Z INPUT 1   # Add rule number
+
+# To clear all the currently configured rules: Flush
+iptables -F
+iptables -t nat -F   # Flush from nat table. -t: table, i.e., filter, nat, mangle
+iptables -F INPUT
+
+# Save and restore iptables
+iptables-save > ~/iptables.rules
+iptables-restore < ~/iptables.rules
+
+# Persist changes
+iptables-save
+
+# File location
+/etc/iptables/{after,before,user}{,6}.rules
+/etc/ufw/{after,before,user}{,6}.rules
+
+# Accept connections by default:
+iptables --policy INPUT ACCEPT
+iptables --policy OUTPUT ACCEPT
+iptables --policy FORWARD ACCEPT
+
+# Deny all connections so you will manually specify which ones you want to allow to connect
+iptables --policy INPUT DROP
+iptables --policy OUTPUT DROP
+iptables --policy FORWARD DROP
+
+# Block all connections from the IP address 10.10.10.10:
+iptables -A INPUT -s 10.10.10.10 -j DROP         # -A: Append; -s: source; -j: jump, target of the rule, ACCEPT, DROP, RETURN
+iptables -A INPUT -p tcp -s 10.10.10.10 -j DROP  # Only block TCP traffic
+iptables -A INPUT -i eth0 -s 10.10.10.10 -j DROP # Limit access to interface eth0
+
+# Unblock IP address 10.10.10.10:
+iptables -D INPUT -s 10.10.10.10 -j DROP         # -D: delete
+
+# Block all connections from all IPs in the 10.10.10.0/24 network range:
+iptables -A INPUT -s 10.10.10.0/24 -j DROP
+iptables -A INPUT -s 10.10.10.0/255.255.255.0 -j DROP
+
+# Block SSH connections from 10.10.10.10:
+iptables -A INPUT -p tcp --dport ssh -s 10.10.10.10 -j DROP   # Can replace ssh with 22
+
+# Block SSH connections from any IP address:
+iptables -A INPUT -p tcp --dport ssh -j DROP    # -p: protocol; -dport: destination port
+
+# Limit number of concurrent connections
+iptables -A INPUT -p tcp --syn --dport 22 -m connlimit --connlimit-above 3 -j REJECT
+
+# Allow multiple ports:
+iptables -A INPUT  -p tcp -m multiport --dports 22,80,443 -j ACCEPT
+iptables -A OUTPUT -p tcp -m multiport --sports 22,80,443 -j ACCEPT
+
+# Allow SSH connections FROM 10.10.10.10, not TO 10.10.10.10:
+# However, the system is permitted to send back information over SSH as long as the session has already been established,
+# which makes SSH communication possible between these two hosts.
+iptables -A INPUT -p tcp --dport ssh -s 10.10.10.10 -m state --state NEW,ESTABLISHED -j ACCEPT   # -m: match
+iptables -A OUTPUT -p tcp --sport 22 -d 10.10.10.10 -m state --state ESTABLISHED -j ACCEPT
+
+# Block incoming ping
+iptables -A INPUT -p icmp -i eth0 -j DROP
+
+# Allow loopback
+iptables -A INPUT -i lo -j ACCEPT    # -i: interface
+iptables -A OUTPUT -o lo -j ACCEPT
+
+# Log dropped packets on eth0
+iptables -A INPUT -i eth0 -j LOG --log-prefix "IPtables dropped packets:"
+grep "IPtables dropped packets:" /var/log/messages
+
+# Search within iptables
+iptables -L $table -v -n | grep $string    # Replace $table and $string
+iptables -L INPUT -v -n | grep 10.10.10.0
+
+# Disable outgoing mail by blocking outgoing ports on SMTP ports:
+iptables -A OUTPUT -p tcp --dports 25,465,587 -j REJECT
+
+# Reject with:
+iptables -A INPUT -p udp -j REJECT --reject-with icmp-port-unreachable
+iptables -A INPUT -p tcp -j REJECT --reject-with tcp-reset
