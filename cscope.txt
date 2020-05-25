@@ -1,0 +1,18 @@
+# Install cscope and ctags
+sudo apt update
+sudo apt install cscope
+sudo apt install exuberant-ctags
+
+# Create tags
+ctags -R /your/directory/
+
+# Add the following to .vimrc
+set tags=/your/direcroty/tags
+
+# Add the following to .bashrc
+export CSCOPE_EDITOR=vim
+
+# Start cscope
+# -R: Recurse subdirectories during search for source files
+# -sdir: Look in dir for additional source files. This option is ignored if source files are given on the command line.
+cscope -R -s /your/directory/
