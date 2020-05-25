@@ -1,0 +1,43 @@
+# List all Ports (both listening and non listening ports)
+netstat -a
+netstat -at   # TCP ports
+netstat -au   # UDP ports
+
+# List sockets which are in Listening State
+netstat -l
+netstat -lt   # TCP
+netstat -lu   # UDP
+netstat -lx   # UNIX
+
+# Show the statistics for each protocol
+netstat -s
+netstat -st   # TCP
+netstat -su   # UDP
+
+# Display PID and program names
+# -p can be combined with any other netstat option
+# useful to identify which program is running on a particular port
+netstat -ap | grep ssh
+netstat -ap | grep http
+
+# Print which program is using a particular port
+netstat -anp | grep ':80' | grep LISTEN
+
+# Don’t resolve host, port and user name in netstat output
+netstat -an
+netsat -a --numeric-ports
+netsat -a --numeric-hosts
+netsat -a --numeric-users
+
+# Print netstat information every few seconds
+netstat -c
+
+# Show the list of network interfaces
+netstat -i
+netstat -ie   # With extended info on the interface
+
+# How to check if port is in use
+netstat -tulpn | grep LISTEN
+ss -tulwnp | grep LISTEN       # For latest Linux, -w Raw socket
+lsof -i -P -n | grep LISTEN
+lsof -i:22                     # see a specific port such as 22
