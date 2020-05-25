@@ -1,0 +1,70 @@
+
+# Capture traffic from specific interface
+tcpdump -i eth0    # -v or -vv for more details; # -s0 for unlimited size
+
+# Don't convert addresses (i.e., host addresses, port numbers, etc.) to names
+tcpdump -n -i eth0    # -n, -nn
+
+# Capture only TCP packets
+tcpdump -i eth0 tcp
+tcpdump tcp
+
+# Capture only specific port
+tcpdump -i eth0 port 22
+tcpdump port 22
+tcpdump src port 22
+tcpdump portrange 21-23
+
+# Capture packets from specific source IP
+tcpdump -i eth0 src 10.10.10.0
+tcpdump src 10.10.10.0
+
+# Capture packets from destination IP
+tcpdump -i eth0 dst 10.10.10.0
+tcpdump dst 10.10.10.0
+
+# Capture packets from and to IP
+tcpdump -i eth0 host 10.10.10.0
+tcpdump host 10.10.10.0
+
+# Capture traffic by network
+tcpdump net 10.10.10.0/24
+
+# Capture traffic based on packet size
+tcpdump less 32 
+tcpdump greater 64 
+tcpdump <= 128
+
+# Capture specified number of packets
+tcpdump -c 5 -i eth0
+
+# Print packets in ASCII
+tcpdump -A -i eth0
+
+# Display available interfaces
+tcpdump -D
+
+# Save captured packets in a file
+tcpdump -w my_dump_file.txt -i eth0
+
+# Read captured packet file
+tcpdump -r my_dump_file.txt
+
+# Extract HTTP User Agents
+tcpdump -nn -A -s1500 -l | grep "User-Agent:"
+
+# Extract HTTP User Agents and HOST
+tcpdump -nn -A -s1500 -l | egrep -i 'User-Agent:|Host:'
+
+# Extract HTTP Request URL's
+tcpdump -s 0 -v -n -l | egrep -i "POST /|GET /|Host:"
+
+# Combination: && or and, || or or, ! or not
+# From specific IP and destined for a specific Port
+tcpdump -ttnnvvS src 10.5.2.3 and dst port 3389   # absolute sequence#, human-readable timestamps
+# From One Network to Another
+tcpdump -nvX src net 192.168.0.0/16 and dst net 10.0.0.0/8 or 172.16.0.0/16
+# Non ICMP Traffic Going to a Specific IP
+tcpdump dst 192.168.0.2 and src net and not icmp
+# Traffic From a Host That Isn’t on a Specific Port
+tcpdump -vv src mars and not dst port 22
