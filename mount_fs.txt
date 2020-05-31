@@ -1,0 +1,89 @@
+# List all mounted filesystems
+mount -l
+
+# List all ext4 filesystems mounted
+mount -l -t ext4
+
+# mount device: -r, read-only; -w read-write;
+# -o options, async,noasync,noauto,sync,atime,noatime,diratime,nodiratime,dirsync,relatime,norelatime,ro,rw
+mount -t type device mountpoint
+
+# Look for a mountpoint in /etc/fstab
+mount device
+mount mountpoint
+mount --source device
+mount --target mountpoint
+
+# Mount all devices described in /etc/fstab
+mount -a
+
+# Override mount options from /etc/fstab with the -o option
+mount device|mountpoint -o options
+
+# Remount part of the file hierarchy somewhere else:
+mount --bind olddir newdir
+# or by using this fstab entry:
+/olddir /newdir none bind
+
+# Create an ISO image from a folder
+mkisofs -o output.iso input_directory
+
+# Mount ISO image
+mount -t iso9660 -o loop /path/to/image-file /mnt/iso
+
+# Create a squashed filesystem out of a single directory and output it to a regular file, thus producing a filesystem image
+mksquashfs /some/dir dir.sqsh
+
+# Mount a squashed filesystem  using a loopback device
+mount -t squashfs -o loop dir.sqsh /mnt/dir
+
+# Mount a remote NFS share: -t nfs
+mount [OPTION...] NFS_SERVER:EXPORTED_DIRECTORY MOUNT_POINT
+
+# Unmount filesystems: -f, --force; -l --lazy
+umount device
+umount mountpoint
+
+# List block devices
+lsklb [options] [device...]
+
+# Provide overview of filesystems, LABELs and UUIDs on available block devices
+lsblk --fs
+
+# Verify that the UUIDs are really unique in the system
+lsblk -o +UUID,PARTUUID
+
+# Provide details about a filesystem on the specified device
+blkid -p device
+
+# Manipulate disk partition table
+fdisk [options] device
+parted [options] [device [command [options...]...]]
+
+# Report file system disk space usage: df [OPTION]... [FILE]...
+# -a, –all : includes pseudo, duplicate and inaccessible file systems.
+# -B, –block-size=SIZE : scales sizes by SIZE before printing them.
+# -h, –human-readable : print sizes in power of 1024
+# -H, –si: print sizes in power of 1000
+# -i, –inodes : list inode information instead of block usage
+# -l, –local : limit listing to local file systems
+# -P, –portability : use POSIX output format
+# –sync : invoke sync before getting usage info
+# –total : elide all entries insignificant to available space, and produce grand total
+# -t, –type=TYPE : limit listing to file systems of type TYPE
+# -T, –print-type : print file system type
+df
+
+# Estimate file space usage: du [OPTION]... [FILE]...
+# -0, –null : end each output line with NULL
+# -a, –all : write count of all files, not just directories
+# –apparent-size : print apparent sizes, rather than disk usage.
+# -B, –block-size=SIZE : scale sizes to SIZE before printing on console
+# -c, –total : produce grand total
+# -d, –max-depth=N : print total for directory only if it is N or fewer levels below command line argument
+# -h, –human-readable : print sizes in human readable format
+# -S, -separate-dirs : for directories, don’t include size of subdirectories
+# -s, –summarize : display only total for each directory
+# –time : show time of last modification of any file or directory.
+# –exclude=PATTERN : exclude files that match PATTERN
+du
