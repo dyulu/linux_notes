@@ -1,0 +1,47 @@
+# Create/Untar tar Archive File
+# -c, --create – Creates a new .tar archive file.
+# -v – Verbosely show the .tar file progress.
+# -f, --file – Filename type of the archive file.
+# -x, --extract, --get: extract files from an archive.
+# -f should come at last just before filename
+tar -cvf my.tar /my/dir/
+tar -xvf my.tar
+
+# Create/Uncompress tar.gz Archive File
+# -z, --gzip, --gunzip, --ungzip: Filter the archive through gzip
+tar cvzf my.tar.gz /my/dir/
+tar -xvzf my.tar.gz
+
+# Create/Uncompress tar.bz2 Archive File
+# -j, --bzip2: Filter the archive through bzip2
+tar cvjf my.tar.bz2 /my/dir/
+tar cvjf my.tar.tbz /my/dir/
+tar cvjf my.tar.tbz2 /my/dir/
+tar cvjf my.tar.tb2 /my/dir/
+tar -xvjf my.tar.bz2
+
+# List Content Archive File
+# -t: List archive contents to stdout
+tar -tvf my.tar
+tar -ztvf my.tar.gz
+tar -jtvf my.tar.bz2
+
+# Untar single file from archive
+tar -xvf my.tar the-file
+tar -zxvf my.tar.gz the-file
+tar -jxvf my.tar.bz2 the-file
+
+# Add file or directory to archive
+tar -rvf my.tar the-file
+tar -rvf my.tar.gz the-file
+tar -rvf my.tar.bz2 the-file
+
+# Get an archive from a server and extract it to a particular directory
+# -L, --location: If the server reports that the requested page has moved to
+#                 a different location (indicated with a Location: header and
+#                 a 3XX response code), this  option  will make curl redo the
+#                 request on the new place
+# -C dir: change directory after opening the archive but before
+#         extracting entries from the archive
+curl -L "https://server/archive.tgz" | tar -C /dest/dir/ -xz
+wget https://server/archive.tgz
