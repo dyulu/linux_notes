@@ -1,0 +1,46 @@
+# List Ethernet Device Properties
+ethtool eth0
+
+# Change NIC Parameter Using ethtool Option -s autoneg
+ifdown eth0
+ethtool -s eth0 autoneg off
+ethtool eth0
+ifup eth0
+
+# Change the Speed of Ethernet Device
+ethtool -s eth0 speed 100 autoneg off
+
+# Display Ethernet Driver Settings
+ethtool -i eth0
+
+# Display Auto-negotiation, RX and TX
+ethtool -a eth0
+
+# Network Device Adaptive RX/TX
+ethtool -c eth0
+ethtool -C eth0 adaptive-rx on|off
+
+# Set interrupt coalescing settings when adaptive moderation is disabled
+ethtool -c eth<x> [rx-usecs N] [rx-frames N]
+
+# Offload feature
+ethtool -k eth0
+ethtool -K eth0 [rx on|off] [tx on|off] [sg on|off] [tso on|off]
+
+# Ring size
+ethtool -g eth0
+ethtool -G eth0 [rx <N>] [tx <N>]
+
+# Number of ring entries
+ethtool -l eth0
+ethtool -L eth0  [rx N] [tx N] [other N] [combined N]
+
+# Display Network Statistics of Specific Ethernet Device
+ethtool -S eth0
+
+# Make Changes Permanent
+On ubuntu, modify /etc/network/interfaces file and add all your changes as shown below.
+# vim /etc/network/interfaces
+post-up ethtool -s eth2 speed 1000 duplex full autoneg off
+# The above line should be the last line of the file. 
+# This will change speed, duplex and autoneg of eth2 device permanently.
