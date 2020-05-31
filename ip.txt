@@ -1,0 +1,84 @@
+ip OBJECT COMMAND
+ip [options] OBJECT COMMAND
+ip OBJECT help
+
+# OBJECT
+link (l) - Display and modify network interfaces.
+address (a) - Display and modify IP Addresses.
+route (r) - Display and alter the routing table.
+neigh (n) - Display and manipulate neighbor objects (address resolution protocol (ARP) table).
+
+# Display a list of all/particular network interfaces
+ip link show
+ip link show dev (interface}
+
+# Change the state of the device to UP or DOWN
+ip link set dev {DEVICE} {up|down}
+ip link set dev eth1 down
+ip link set dev eth1 up
+
+# Change the maximum transmission units (MTU) of the device
+ip link set mtu {NUMBER} dev {DEVICE}
+ip link set mtu 9000 dev eth0
+ip a list eth0
+
+
+# Get information about a list of all/specific network interface
+ip addr show
+ip addr show dev {interface}
+
+# Displaying and Modifying IP Addresses
+ip addr [ COMMAND ] ADDRESS dev {interface}
+
+# Assigns the IPv4/IPv6 address to the interface
+ip a add {ip_addr/mask} dev {interface}
+ip a add 192.168.1.200/255.255.255.0 dev eth0
+ip a add 192.168.1.200/24 dev eth0
+
+# Delete the IPv4/IPv6 address from the interface
+ip a del {ipv6_addr_OR_ipv4_addr} dev {interface}
+ip a del 192.168.1.200/24 dev eth0
+
+
+# Display the contents of the routing tables
+ip r
+ip r list
+ip route list
+ip r list [options]
+ip route
+
+# Display routing for 192.168.1.0/24
+ip r list 192.168.1.0/24
+
+# Add a new route
+ip route add {NETWORK/MASK} via {GATEWAYIP}
+ip route add {NETWORK/MASK} dev {DEVICE}
+ip route add default {NETWORK/MASK} dev {DEVICE}
+ip route add default {NETWORK/MASK} via {GATEWAYIP}
+
+# Add a plain route to network 192.168.1.0/24 via gateway 192.168.1.254:
+ip route add 192.168.1.0/24 via 192.168.1.254
+
+# To route all traffic via 192.168.1.254 gateway connected via eth0 network interface:
+ip route add 192.168.1.0/24 dev eth0
+
+# Delete a route
+ip route del default
+ip route del 192.168.1.0/24 dev eth0
+
+# Add a new ARP entry
+ip neigh add {IP-HERE} lladdr {MAC/LLADDRESS} dev {DEVICE} nud {STATE}
+# Add a permanent ARP entry for the neighbour 192.168.1.5 on the device eth0:
+ip neigh add 192.168.1.5 lladdr 00:1a:30:38:a8:00 dev eth0 nud perm
+
+# Delete a ARP entry
+ip neigh del {IPAddress} dev {DEVICE}
+ip neigh del 192.168.1.5 dev eth1
+
+# CHANGE ARP STATE TO REACHABLE FOR THE NEIGHBOUR 192.168.1.100 ON THE DEVICE ETH1
+ip neigh chg 192.168.1.100 dev eth1 nud reachable
+
+# Flush ARP entry
+ip -s -s n f {IPAddress}
+ip -s -s n f 192.168.1.5
+ip -s -s n flush 192.168.1.5
