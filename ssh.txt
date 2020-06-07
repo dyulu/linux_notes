@@ -1,0 +1,145 @@
+# Password-less authentication to access a remote server
+# 1) Create a key pair on host machine, e.g., ~/.ssh/id_rsa and ~/.ssh/id_rsa.pub
+ssh-keygen -t rsa
+# 2) Copy public key, e.g., ~/.ssh/id_rsa.pub, to remote server ~/.ssh/authorized_keys 
+ssh-copy-id username@remote_server
+# 3) SSH to remote server.
+ssh username@remote_server
+ssh -l username remote_server
+
+# The ssh-agent is a helper program that keeps track of user's identity keys and their passphrases.
+# The agent can then use the keys to log into other servers without having the user type in a
+# password or passphrase again
+# 1) Check if ssh-agent is running
+env | grep SSH_AUTH_SOCK
+ssh-add -l
+# 2) Start ssh-agent manually if it is not started yet
+eval $(ssh-agent -s)
+ssh-add the_private_key_file   # When prompted, provide the passphrase that protects this private key
+# 3) SSH to remote server that has the corrsponding public key installed
+ssh username@remote_server     # No passphrase will be asked
+
+# Run remote commands from local host
+ssh username@remote_server the_cmd
+
+# SSH options
+# -V: ssh version
+# -v: verbose to debug ssh client
+# -q: quiet mode
+# -p: port
+# -i identity_file:
+#     selects a file from which the identity (private key) for public key authentication is read
+#     The default is ~/.ssh/id_dsa, ~/.ssh/id_ecdsa, ~/.ssh/id_ed25519 and ~/.ssh/id_rsa
+# -X: enables X11 forwarding
+# -Y: enables trusted X11 forwarding
+# -c cipher_spec: selects the cipher specification for encrypting the session
+# -C: requests compression of all data (including stdin, stdout, stderr, and data for forwarded X11,
+#     TCP and UNIX-domain connections)
+# -E log_file: append debug logs to log_file instead of standard error
+# -f: requests ssh to go to background just before command execution
+# -o option: used to give options in the format used in the configuration file
+# -L [bind_address:]port:host:hostport
+# -L [bind_address:]port:remote_socket
+# -L local_socket:host:hostport
+# -L local_socket:remote_socket
+#    specifies that connections to the given TCP port or Unix socket on the local (client) host
+#    are to be forwarded to the given host and port, or Unix socket, on the remote side
+# -R [bind_address:]port:host:hostport
+# -R [bind_address:]port:local_socket
+# -R remote_socket:host:hostport
+# -R remote_socket:local_socket
+# -R [bind_address:]port
+#    specifies that connections to the given TCP port or Unix socket on the remote (server) host
+#    are to be forwarded to the local side
+# -g: allows remote hosts to connect to local forwarded ports
+# -N: do not execute a remote command. Useful for just forwarding ports
+
+# SSH config
+#   per-user configuration is in ~/.ssh/config
+#   system-wide client configuration is in /etc/ssh/ssh_config
+#   system-wide daemon configurtion is in /etc/ssh/sshd_config
+
+# Configuration Order
+#   Command-line options given directly in the terminal
+#   User’s configuration file (~/.ssh/config)
+#   System-wide configuration file for the client (/etc/ssh/ssh_config)
+
+# Local secure port forwarding
+# For example, to connect from client A to server B but route traffic securely through server C
+# 1) From A, run
+ssh C -L localport:B:remoteport
+# 2) To connect to B:remoteport, connect to localhost:localport
+ssh localhost:localport
+# If doing this with config file  ~/.ssh/config:
+ Host B_fw
+ HostName C
+ LocalForward 80 B:80
+
+# Remote secure port forwarding
+# For example, to give remote machine B access to another machine A, by passing securely through your local
+# machine C.
+# 1) From C, run
+ssh B -R remoteport:A:targetport
+# At this point, local users on B can connect to A:targetport through localhost:remoteport.
+# If doing this with config file  ~/.ssh/config:
+ Host exportme
+ HostName B
+ RemoteForward remoteport A:targetport
+
+# To give support on support.mycompany.com access to machine A, run the following on machine A:22:
+ssh support@support.mycompany.com -f -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -N -R 50000:localhost:22 MY_SUPPORT_TUNNEL
+# Log on to machine A from support.mycompany.com:
+ssh -p 50000 user_on_A@localhost
+
+# To give support on support.mycompany.com access to machine B:443 through machine A, run the following on machine A:
+ssh support@support.mycompany.com -f -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -N -R 50000:B:443 MY_SUPPORT_TUNNEL
+# Log on to machine B from support.mycompany.com:
+ssh -p 50000 user_on_B@localhost
+
+# Close all ssh tunnels
+pkill -f "ssh.*MY_SUPPORT_TUNNEL"      # -f: match against full argument lists
+
+# squid proxy server
+sudo apt install squid
+# /etc/squid3/squid.conf
+acl SSL_ports port 443
+acl SSL_ports port 22
+acl Safe_ports port 22 # ssh
+acl Safe_ports port 80 # http
+acl Safe_ports port 21 # ftp
+acl Safe_ports port 443 # https
+acl Safe_ports port 70 # gopher
+acl Safe_ports port 210 # wais
+acl Safe_ports port 1025-65535 # unregistered ports
+acl Safe_ports port 280 # http-mgmt
+acl Safe_ports port 488 # gss-http
+acl Safe_ports port 591 # filemaker
+acl Safe_ports port 777 # multiling http
+acl CONNECT method CONNECT
+http_access deny !Safe_ports
+http_access deny CONNECT !SSL_ports
+http_access allow localhost manager
+http_access deny manager
+#http_access deny all
+http_port 3128
+coredump_dir /var/spool/squid3
+auth_param basic program /usr/lib/squid3/basic_ncsa_auth /etc/squid3/passwords
+auth_param basic realm proxy
+acl authenticated proxy_auth REQUIRED
+http_access allow authenticated
+http_access allow all
+# Enable proxy password
+/etc/squid3# htpasswd -bc passwords admin admin
+Adding password for user admin
+/etc/squid3# cat passwords 
+admin:$apr1$KnPBibRs$0qbBwSH/dPvprUfsWulgt1
+/etc/squid3# service squid3 restart
+squid3 stop/waiting
+squid3 start/running, process 6853
+
+# socat: Multipurpose relay (SOcket CAT)
+Host support.mycompany.com
+    ProxyCommand socat - PROXY:proxy_server:%h:%p,proxyport=3128,proxyauth=admin:admin
+    Port 443
+    ServerAliveCountMax 20
+    ServerAliveInterval 30
