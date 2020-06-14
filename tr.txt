@@ -1,0 +1,51 @@
+# tr - translate or delete characters, characters in SET1 are translated to characters in SET2
+# tr [OPTION]... SET1 [SET2]
+# -c, -C, --complement: use the complement of SET1
+# -d, --delete: delete characters in SET1, do not translate
+# -s, --squeeze-repeats: replace each sequence of a repeated character that is listed in the last specified SET,
+#                        with a single occurrence of that character
+# -t, --truncate-set1: first truncate SET1 to length of SET2
+
+# echo "Hello, world" | tr “[a-z]” “[A-Z]”
+HELLO, WORLD
+# echo "Hello, world" | tr [a-z] [A-Z]
+HELLO, WORLD
+# echo "Hello, world" | tr “[:lower:]” “[:upper:]”
+HELLO, WORLD
+# echo "Hello, world" | tr [:space:] '\n'
+Hello,
+world
+# echo "Hello, world" | tr ' ' '\n'
+Hello,
+world
+# echo "Hello, {the} world" | tr '{}' '()'
+Hello, (the) world
+# echo "Hello, {the} world" | tr -d '{}'
+Hello, the world
+# echo "Hello, world" | tr Hello h
+hhhhh, whrhd
+# echo "Hello, world" | tr Hello hi     # tr repeats the last character of the 2nd set if the 1st and 2nd sets are different lengths
+hiiii, wirid                            # H to h, e to i, l to i, o to i
+# echo "Hello, world" | tr -t Hello hi
+hillo, world                            # H to h, e to i
+# echo "Hello, the world" | tr Hello hi  
+hiiii, thi wirid
+# echo "Hello, the world" | tr -t Hello hi  
+hillo, thi world
+# echo "Hello, world" | tr Hello hey
+heyyy, wyryd                            # H to h, e unchanged, l to y, o to y
+# echo "My phone number is 123-1234567." | tr -d [:digit:]
+My phone number is -.
+# echo "My phone number is 123-1234567." | tr -cd [:digit:]
+1231234567
+# echo "My phone number is 123-1234567." | tr -d [a-zA-Z]
+    123-1234567.
+# echo "My phone number isssss 123-1234567." | tr -s s
+My phone number is 123-1234567.
+
+# Remove all non-printable character from a file
+tr -cd [:print:] < file.txt
+# Join all the lines in a file into a single line
+tr -s '\n' ' ' < file.txt
+# Remove blank lines
+tr -s '\n' < file.txt
