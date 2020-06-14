@@ -1,0 +1,71 @@
+# xargs: a command line utility for building an execution pipeline from standard input. Whilst tools like grep
+#        can accept standard input as a parameter, many other tools cannot. Using xargs allows tools like echo
+#        and rm and mkdir to accept standard input as arguments.
+#        By default xargs reads items from standard input as separated by blanks and executes a command once for
+#        each argument.
+# -0: change xargs to expect NUL (``\0'') characters as separators, instead of spaces and newlines.  This is expected
+#     to be used in concert with the -print0 function in find.
+# -E eof-str: set the end of file string to eof-str.  If the end of file string occurs as a line of input, the rest
+#             of the input is ignored.
+# -L max-lines: use at most max-lines nonblank input lines per command line
+# -I replstr: execute utility for each input line, replacing one or more occurrences of replstr in up to replacements
+#             (or 5 if no -R flag is specified) arguments to utility with the entire line of input.
+# -R replacements: specify the maximum number of arguments that -I will do replacement in
+# -a file, --arg-file=file: read  items  from  file  instead of standard input
+# --delimiter=delim, -d delim: input items are terminated by the specified character
+# -n number: set the max number of arguments taken from standard input for each invocation of utility
+# -p: print the cmd and prompt for execution
+# -t: print the cmd that is executed
+# -r, --no-run-if-empty: if the standard input does not contain any nonblanks, do not run the command.
+
+# Create three folders named dir1, dir2, and dir3
+echo 'dir1 dir2 dir3' | xargs mkdir
+echo 'dir1 dir2 dir3' | xargs -t mkdir  # -t: print the cmd that is executed
+echo 'dir1 dir2 dir3' | xargs -p mkdir  # -p: print the cmd and prompt for execution
+
+# Run multiple commands
+echo 'dir1 dir2 dir3' | xargs -I % sh -c 'echo %; mkdir %'  # sh -c string: commands are read from string
+
+# Remove files older than two weeks in /tmp
+find /tmp -mtime +14 | xargs rm         # More efficient that -exec below
+find /tmp -mtime +14 -exec rm {} \;
+
+# Find out all .png images and archive them using the tar
+# -print0: enables printing of the full file path on the standard output, followed by a null character
+# -0: change xargs to expect NUL (``\0'') characters as separators, instead of spaces and newlines.  This is expected
+#     to be used in concert with the -print0 function in find.
+find / -name "*.png" -type f -print0 | xargs -0 tar -cvzf images.tar.gz
+
+# Convert multi-line output into single line
+ls -l | xargs
+
+# Convert multi-line output into 9 items per line
+ls -l | xargs -n 9
+
+# Generate a compact list of all Linux user accounts on the system
+cut -d: -f1 < /etc/passwd | sort | xargs
+cat /etc/passwd | cut -d: -f1 | sort | xargs
+
+# Get the number of lines/words/characters in each file in a list
+ls | xargs wc
+
+# Copy a file to multiple directories at once
+# -n number: set the max number of arguments taken from standard input for each invocation of utility
+echo ./Templates/ ./Documents/ | xargs -n 1 cp -v ./Downloads/myfile.txt
+
+# Find all .txt files in the current directory and delete them
+find . -name "*.txt" -type f -print0 | xargs -0 /bin/rm -v -rf "{}"
+
+# Delete all files within a directory except one or few files with a given extension
+find . -type f -not -name '*gz' -print0 | xargs -0 -I {} rm -v {}
+
+# Find all cpp files that include myfile.h header
+find . -name '*.cpp' | xargs grep 'myfile.h'
+
+# cat ips.txt
+www.yahoo.com
+www.google.com
+# xargs -t -L 1 -a ips.txt ping -c 1
+
+# Remove whitespace from both sides of a given string
+echo "  Line with unwanted spaces on both side   " | xargs
