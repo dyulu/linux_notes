@@ -1,0 +1,85 @@
+# find - search for files in a directory hierarchy
+# -exec utility [argument ...] ;: The expression must be terminated by a semicolon. Utility will be executed
+#   from the directory from which find was executed.  Utility and arguments are not subject to the further
+#   expansion of shell patterns and constructs.
+# -ok utility [argument ...] ;: Works same as -exec except the user is prompted first.
+# -inum N : Search for files with inode number ‘N’.
+# -links N : Search for files with ‘N’ links.
+# -name myfile.txt : Search for files that are specified by ‘myfile.txt’.
+# -newer myfile.txt : Search for files that were modified/created after ‘myfile.txt’.
+# -perm octal : Search for the file if permission is ‘octal’.
+# -print : Display the path name of the files found by using the rest of the criteria.
+# -empty : Search for empty files and directories.
+# -size +N/-N : Search for files of ‘N’ blocks; ‘N’ followed by ‘c’can be used to measure size in characters;
+#    ‘+N’ means size > ‘N’ blocks and ‘-N’ means size < 'N' blocks.
+# -user username : Search for files owned by user name or ID ‘username’.
+# \(expr \) : True if ‘expr’ is true; used for grouping criteria combined with OR or AND.
+# ! expr : True if ‘expr’ is false.
+
+# Find all files whose name is myfile.txt in current directory
+find . -name myfile.txt
+find . -type f -name myfile.txt
+find . -maxdepth 2 -name myfile.txt      # Limit depth of dir traversal
+
+find . -not -name '*.txt'                # Invert match
+find . ! -name '*.txt'                   # Same as -not
+find . -name '*.txt' -o -name '*.mp3'    # -o: OR; .txt or .mp3 files
+find . -name 'abc*' ! -name '*.txt'      # Filename matches abc* but not .txt file
+find . -type f \( -name '*.txt' -o -name '*.mp3' \)
+
+# Find all files whose name is myfile.txt, ignoring case, in current directory
+find . -iname myfile.txt
+
+# Find all directories whose name is tempdir in / directory
+find / -type d -name tempdir
+
+# Find all squashfs files
+find / -type f -name *.squashfs
+
+# Find all the files whose permissions are 777
+find . -type f -perm 0777 -print
+
+# Find all the files without permission 777
+find / -type f ! -perm 777
+
+# Find all Read Only files
+find / -perm /u=r
+
+# Find all Executable files
+find / -perm /a=x
+
+# Find all 777 permission files and use chmod command to set permissions to 644
+find / -type f -perm 0777 -print -exec chmod 644 {} \;
+
+# Find and remove all .mp3 files
+find . -type f -name "*.mp3" -exec rm -f {} \;
+
+# Find all empty files
+find / -type f -empty
+
+# Find all empty directory
+find / -type d -empty
+
+# Find all hidden files
+find / -type f -name ".*"
+
+# Find all files that belong to user admin
+find / -user admin
+
+# Find all files that belong to user admin with name admin.txt
+find / -user admin -name admin.txt
+
+# Find all files that belong to group developer
+find /home -group developer
+
+# Find all the files which are modified 50 days back
+find / -mtime 50
+
+# Find all the files which are accessed 50 days back
+find / -atime 50
+
+# Find all the files which are changed in last 1 hour
+find / -cmin -60
+
+# Find and delete all mp3 files with sizes greater than 100M
+find / -type f -name *.mp3 -size +100M -exec rm -f {} \;
