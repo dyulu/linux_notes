@@ -1,0 +1,68 @@
+
+ipmitool -I lanplus -H bmc_ip -U user -P passwd ipmi_cmd:
+
+channel info channel#
+
+chassis status: 
+chassis power on:
+chassis power off:
+chassis power cycle:
+chassis power soft:
+chassis power reset:
+
+mc reset warm|cold: instructs the BMC to perform a warm or cold reset
+mc info: BMC hardware info
+mc selftest:
+
+raw <netfn> <cmd> [data]: 
+
+sdr list: get a list of all sensors in these servers and their status
+
+sdr elist: also print sensor number, entity id and instance, and asserted discrete states
+    refine the output to see only specific sensors:
+          all: All sensor records; All sensors
+          full: Full sensor records; Temperature, voltage, and fan sensors
+          compact: Compact sensor records; Digital Discrete: failure and presence sensors
+          event: Event-only records; Sensors used only for matching with SEL records
+          mcloc: MC locator records; Management Controller sensors
+          generic: Generic locator records; Generic devices: LEDs
+          fru: FRU locator records; FRU devices
+
+sdr entity entity_id: get a list of all sensors related to an entity
+
+sdr type sensor_type: get a list of a particular type of sensors, e.g., temperature, fan, power supply.
+
+sdr info: query the BMC for SDR information
+
+sensor list: list sensors and thresholds in a wide table format
+
+sensor get sensor_id: get information for sensors specified by ID
+
+fru: get built-in FRU and scan for  FRU  locators
+
+sel info: query the BMC for information about the System Event Log (SEL) and its contents
+
+sel list: view a minimal level of SEL detail
+
+sel elist: view a detailed event output. The sel elist command cross-references event records with sensor data records to produce descriptive event output. It takes longer to execute because it has to read from both the SEL and the Static Data Repository (SDR). For increased speed, generate an SDR cache before using the sel elist command.
+
+sel get sel_record_id:  get more detailed information on a particular event
+
+sel clear: clear the SEL
+
+sel delete <SEL Record ID> ... <SEL Record ID>: delete one or more SEL event records
+
+sel save filename: save SEL to file
+
+sel add filename: read event entries from a file and add them to  the  SEL. Record added is  of  type  2  and  is automatically timestamped.
+
+sel writeraw filename: save SEL records to a file in raw, binary  format
+
+sel readraw filename: read and display SEL records from a binary file
+
+sdr dump cached_sdr_file: pre-cache the static data in the SDR so it can be fed back into IPMItool later
+
+ipmitool -S cached_sdr_file sel elist: speed up sel elist command by using Sensor Data Repository (SDR) cache
+
+user summary:
+user list:
