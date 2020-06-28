@@ -1,0 +1,169 @@
+# grep options
+-A num, --after-context=num: print num lines of trailing context after each match
+-B num, --before-context=num: print num lines of leading context before each match
+-C[num, --context=num]: print num lines of leading and trailing context surrounding each match
+                        no whitespace may be given between the option and its argument
+-c: displays the count of the matching patterns
+-e pattern, --regexp=pattern: useful when multiple -e options are used to specify multiple patterns,
+                              or when a pattern begins with a dash (`-')
+-i, --ignore-case: performs a case-insensitive search
+-l, --files-with-matches: display only the names of files containing selected lines
+-L, --files-without-match: display only the names of files not containing selected lines
+-J, --bz2decompress: decompress the bzip2(1) compressed file before looking for the text
+-m num, --max-count=num: stop reading the file after num matches
+-n, --line-number: displays the lines containing the pattern along with the line numbers, starting 1
+-o, --only-matching: prints only the matching part of the lines
+-q, --quiet, --silent: quiet mode
+-v, --invert-match: displays the lines not containing the specified pattern
+-w, --word-regexp: the expression is searched for as a word (as if surrounded by `[[:<:]]' and `[[:>:]]'
+-Z, -z, --decompress: force grep to behave as zgrep, accept input files compressed with gzip
+--color=never|always|auto: display match in color defined by the environment variable GREP_COLORS
+-E, --extended-regexp: interpret pattern as an extended regular expression. egrep
+-F, --fixed-strings: interpret PATTERN as a list of fixed strings (instead of regular expressions),
+                     separated by newlines, any of which is to be matched. fgrep
+-G, --basic-regexp: interpret PATTERN as a basic regular expression (BRE).  This is the default.
+-P, --perl-regexp: interpret the pattern as a Perl-compatible regular expression (PCRE).
+
+# Regex
+?: The preceding item is optional and matched at most once
+*: The preceding item will be matched zero or more times
++: The preceding item will be matched one or more times
+{n}: The preceding item is matched exactly n times
+{n,}: The preceding item is matched n or more times
+{,m}: The preceding item is matched at most m times.
+{n,m}: The preceding item is matched at least n times, but not more than m times
+[ ]: Matches any one of a set characters, i.e., [a], [abc]
+[ ] with hyphen: Matches any one of a range characters, i.e., [a-e], [0-9]
+^: The pattern following it must occur at the beginning of each line
+^ with [ ] : The pattern must not contain any character in the set specified
+$: The pattern preceding it must occur at the end of each line
+.: Matches any one character
+\: Ignores the special meaning of the character following it
+*: zero or more occurrences of the previous character
+.*: Nothing or any numbers of characters
+[[:alnum:]]: Alphanumeric characters
+[[:alpha:]]: Alphabetic characters
+[[:blank:]]: Blank characters: space and tab
+[[:digit:]]: Digits: ‘0 1 2 3 4 5 6 7 8 9’
+[[:lower:]]: Lower-case letters: ‘a b c d e f g h i j k l m n o p q r s t u v w x y z’
+[[:space:]]: Space characters: tab, newline, vertical tab, form feed, carriage return, and space
+[[:upper:]]: Upper-case letters: ‘A B C D E F G H I J K L M N O P Q R S T U V W X Y Z’
+\<: Match the empty string at the beginning of word
+\>: Match the empty string at the end of word
+\b: Matches the empty string at the edge of a word, can replace \< and \>, e.g., grep '\bvivek' /etc/passwd
+\B: Matches the empty string provided it’s not at the edge of a word, e.g., grep '\B/bin/bash /etc/passwd
+
+# Highlighting the search using GREP_OPTIONS
+export GREP_OPTIONS='--color=auto' GREP_COLOR='100;8'
+# Match all lines that start with ‘hello’. E.g: “hello there”
+grep “^hello” file
+# Match all lines that end with ‘done’. E.g: “well done”
+grep “done$” file
+# Match all lines that contain any of the letters ‘a’, ‘b’, ‘c’, ‘d’ or ‘e’.
+grep “[a-e]” file
+# Match all lines that do not contain a vowel
+grep “[^aeiou]” file
+# Match all lines that start with a digit following zero or more spaces. E.g: “ 1.” or “2.”
+grep “ *[0-9]” file
+# Match all lines that contain the word hello in upper-case or lower-case
+grep -i “hello” file
+# Match full words "is" regardless of case, not for sub-strings, e.g., won't match "this"
+grep -iw "is" file
+# Match all lines in a file which do not contain the words `foo' or `bar'
+grep -v -e 'foo' -e 'bar' file
+# Match lines beginning with an non-alphabetic character
+grep  “^[^a-z A-Z]”  file
+# Match vivek or raj in any case
+grep -E -i -w 'vivek|raj' /etc/passwd
+# Match all upper case letters
+grep '[:upper:]' file
+# Print all lines with exactly two characters
+grep '^..$' file
+# Match all 3 character word starting with “b” and ending in “t”
+grep '\<b.t\>' file
+# Display any lines starting with a dot and digit
+grep '^\.[0-9]' file
+# Searches for all lines matching ‘–test–‘
+grep -e '--test--' file
+# OR
+grep -E 'word1|word2' file
+egrep 'word1|word2'
+grep 'word1\|word2' file
+# AND
+grep 'word1' file | grep 'word2'    # awk '/word1/ && /word2/' file
+# Match mobile number which is in the following format 91-1234567890 (i.e TwoDigit-TenDigit)
+grep "[[:digit:]]\{2\}[ -]\?[[:digit:]]\{10\}" file
+# Match word starting with "fe"
+grep '\<fe' file     # Would match "This file contains a few regular expressions"
+# Match word ending with "le"
+grep 'le\>' file     # Would match "This is test file"
+
+# \K: Keep The Text Matched So Far out of The Overall Regex Match (lookbehind)
+# The \K is the short-form (and more efficient form) of (?<=pattern) which you use as a zero-width look-behind assertion
+# before the text you want to output.
+# (?=pattern) is used as a zero-width look-ahead assertion after the text you want to output.
+# \s: whitespace character
+
+# cat test.txt 
+Filename=    test.txt
+GitOriginUrl=https://github.com/dyulu/linux_notes
+Homepage=https://github.com
+This is a test file.
+# grep -Po '^GitOriginUrl=\K.*' test.txt 
+https://github.com/dyulu/linux_notes
+# grep -o '^GitOriginUrl=\K.*' test.txt
+# grep -Po '^GitOriginUrl=.*' test.txt 
+GitOriginUrl=https://github.com/dyulu/linux_notes
+# grep -o '^GitOriginUrl=.*' test.txt 
+GitOriginUrl=https://github.com/dyulu/linux_notes
+# grep -o '^GitOriginUrl=.*' test.txt | sed 's/GitOriginUrl=//'
+https://github.com/dyulu/linux_notes
+# grep -o '^GitOriginUrl=.*' test.txt | awk -F= '{print $2}'           # -F file_separator
+https://github.com/dyulu/linux_notes
+# grep -o '^GitOriginUrl=.*' test.txt | tr = ' ' |awk '{print $2}'     # tr: translate or delete characters
+https://github.com/dyulu/linux_notes
+# grep -F GitOriginUrl test.txt | cut -d '=' -f 2                      # cut: -d delim
+https://github.com/dyulu/linux_notes                                   # -f list: specify fields, separated by field delimiter 
+# grep -Po '^Filename=\K.*' test.txt 
+    test.txt
+# grep -Po '^Filename=\s+\K.*' test.txt 
+test.txt
+# grep -won test test.txt
+1:test
+4:test
+# grep -m 1 -wn test test.txt
+1:Filename=    test.txt
+# grep -wc test test.txt
+2
+# grep -wo is test.txt
+is
+# grep -Po 'is \K\w+' test.txt 
+is
+# grep -Po '\bis \K\w+' test.txt 
+a
+# grep -Po '(?<=a )\w+(?= file)' test.txt    # match the word between "a" and "file" 
+test
+# grep -Po '\K\w+(?= file)' test.txt 
+test
+# grep -Po 'a \K\w+' test.txt 
+test
+# grep -Po '(?<=a) \K\w+' test.txt 
+test
+# grep -Po '(?<=a )\K\w+' test.txt 
+test
+# grep -Po '(?<=a)\K\w+' test.txt 
+me
+ge
+# grep -Po 'a\K\w+' test.txt 
+me
+ge
+
+# grep "ATA" /sys/class/block/*/device/vendor
+/sys/class/block/sda/device/vendor:ATA     
+/sys/class/block/sdb/device/vendor:ATA 
+# grep -l "ATA" /sys/class/block/*/device/vendor
+/sys/class/block/sda/device/vendor
+/sys/class/block/sdb/device/vendor
+# grep -l "ATA" /sys/class/block/*/device/vendor | grep -Po "/sys/class/block/\K([^/]*)"
+sda
+sdb
