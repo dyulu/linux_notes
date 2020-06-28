@@ -1,0 +1,166 @@
+# Navigation
+h Move left     H Top line on screen
+j Move down     M Middle line on screen
+k Move up       L Bottom line on screen
+l Move right
+10j Move down 10 lines
+gg First line of the file     e The end of the current word
+G Last line of the file       b Beginning of current word
+:20 Line 20 of the file       w Beginning of next word
+0 Beginning of current line
+^ First non-whitespace character of current line
+$ End of current line
+% Move to matching parenthesis, bracket or brace
+
+<ctrl>d Scroll down (half a screen)
+<ctrl>u Scroll up (half a screen)
+<ctrl>f Page forward
+<ctrl>b Page backward
+
+<ctrl>l Redraw screen
+<ctrl>g Display current line number and file information
+
+n Repeat search
+N Repeat search reverse
+G Go to last line
+nG Go to line n
+:n Go to line n
+z<CR> Reposition window: cursor at top
+z. Reposition window: cursor in middle
+z- Reposition window: cursor at bottom
+
+# Editing
+i Insert before current character
+a Insert after current character
+I Insert at the first non-whitespace character of the line
+o Insert a line below the current line, then enter insert mode
+O Insert a line above the current line, then enter insert mode
+r Overwrite one character and return to command mode
+U Undo
+Ctrl+R Redo
+
+# Visual mode
+v - start visual mode, mark lines, then do command (such as y-yank)
+V - start Linewise visual mode
+Ctrl+v - start visual block mode
+o - move to other end of marked area
+O - move to Other corner of block
+> - shift right
+< - shift left
+
+# Opening, closing and saving files
+:w Save the current file
+:wq Save the current file and close it; exits vim if no open files remain
+:w newname Save a copy of the current file as ‘newname,’ but continue editing the original file
+:sav newname Save a copy of the current file as ‘newname’ and continue editing the file ‘newname’
+:q! Close a file without saving
+:e somefile Opens file in the current buffer
+:x Write any changes to the file and close the file
+:r file Insert file after current line
+
+# Mode switching
+i Enter insert mode
+: Enter command mode
+R Enter replace mode
+v Enter visual mode (highlighting)
+V Enter visual line mode (highlighting lines)
+esc Return to normal mode from insert or replace mode
+esc+esc Return to normal mode from command or visual mode
+
+# Copy/pasting
+# Within vim
+y Yank (copy)
+2yy Yank 2 lines
+yw Yank word
+y$ Yank to end of line
+c ‘Change’; cut and enter insert mode
+C Change the rest of the current line
+d Delete; cut but remain in normal mode
+dd Delete a line
+dw Delete the current word
+D Delete the rest of the current line
+p Paste after the cursor
+P Paste before the cursor
+x Delete characters after the cursor
+X Delete characters before the cursor
+dd or ndd Delete n lines to general buffer
+
+Copy/paste commands operate on the specified range. If in visual mode, that range is the
+highlighted text. If in normal mode, that range is specified by a series of modifiers to the
+commands:
+cw Change one word
+c4w Change four words
+c4l Change four letters
+cc Change current line
+4x Change four characters after the cursor
+4p Paste five times after the cursor.
+Modifiers work similarly for cut, delete, yank and paste.
+
+# From system clipboard
+:set paste Enter paste mode
+:set nopaste Exit paste mode
+Ctrl+Shift+V Paste into file, if in paste mode; Command+Shift+V for Mac
+
+# Replace
+:s/foo/bar/ Replace the first occurrence of foo on the current line with bar
+:[range]s/foo/bar/[flags] Replace foo with bar in range according to flags
+
+# Ranges
+% The entire file
+’<,’> The current selection; the default range while in visual mode
+25 Line 25
+25,50 Lines 25-50
+$ Last line; can be combined with other lines as in ‘50,$’
+. Current line; can be combined with other lines as in ‘.,50’
+,+2 The current lines and the two lines therebelow
+-2, The current line and the two lines thereabove
+
+# Flags
+g Replace all occurrences on the specified line(s)
+i Ignore case
+c Confirm each substitution
+
+# Search
+* Find the next instance of the current word
+# Find the previous instance of the current word
+n Find the next instance of the word being searched for, in the direction specified by the last use of {*,#}
+N Find the previous instance of the word being searched for, in the direction specified by the last use of {*,#}
+/word Find the next occurrence of ‘word’
+/word\c Find the next occurrence of ‘word’, ignoring case (‘\c’ can appear anywhere in the sequence being searched for)
+/\<word\> Find the next occurrence of the word ‘word’, where ‘word’ is bounded by word boundaries (ex. space, dash)
+:noh Un-highlight words
+/string Search forward
+?string Search backward
+
+# Parameters
+:set list Show invisible characters
+:set nolist Don’t show invisible characters
+:set number Show line numbers
+:set nonumber Don’t show line numbers
+:set autoindent Indent after carriage return
+:set noautoindent Turn off autoindent
+:set showmatch Show matching sets of parentheses as they are typed
+:set noshowmatch Turn off showmatch
+:set showmode Display mode on last line of screen
+:set noshowmode Turn off showmode
+:set all Show values of all possible parameters
+:set ignorecase Making search case-insensitive
+:set hlsearch Search highlighting
+:set incsearch Incremental search, shows search results as you type
+:set tabstop=4 Show existing tab with 4 spaces width
+:set shiftwidth=4 When indenting with '>', use 4 spaces width
+:set expandtab On pressing tab, insert 4 spaces
+
+# The following example removes the last character from every line in the file. Use it if every line in the file ends
+# with ^M as the result of a file transfer. Execute it when the cursor is on the first line of the file.
+:%s/.$//
+:%s/^M//g      # To enter ^M, type CTRL-V, then CTRL-M
+
+# Replace all old with new throughout file
+:%s/old/new/g
+
+# Replace all old with new throughout file with confirmations
+:%s/old/new/gc
+
+# Print lines containing pattern
+:g/pattern/p
