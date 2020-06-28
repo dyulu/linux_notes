@@ -1,0 +1,10 @@
+# Linux kernel version
+uname -srm
+uname --kernel-name --kernel-release --machine
+
+# Linux distribution
+cat /etc/os-release
+lsb_release -a    # /etc/lsb-release
+cat /etc/issue*
+cat /proc/version
+hostnamectl
