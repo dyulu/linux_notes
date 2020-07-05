@@ -1,0 +1,211 @@
+# Show system status
+systemctl status
+
+# Show cgroup tree
+systemd-cgls
+ps xawf -eo pid,user,cgroup,args   # ps with cgroups; figure out which service a process belongs to
+
+# List running units
+systemctl
+systemctl list-units
+systemctl list-units --all
+systemctl list-units --all --state=inactive
+systemctl list-units --type=service
+
+# List failed units
+systemctl --failed
+systemctl --state=failed
+# To examine their log to figure out why they failed
+journalctl -u failed_service_name
+
+# Diagnose a service
+# set the SYSTEMD_LOG_LEVEL environment variable to debug in service
+[Service]
+Environment=SYSTEMD_LOG_LEVEL=debug
+# set the environment variable manually
+SYSTEMD_LOG_LEVEL=debug /lib/systemd/the_service_name.service
+# Restart the service and watch the log with -f option
+
+# List available units: /usr/lib/systemd/system/ and /etc/systemd/system/ (the latter takes precedence)
+# /usr/lib/systemd/system/: units provided by installed packages
+# /etc/systemd/system/: units installed by the system administrator
+systemctl list-unit-files
+
+# Paths for unit files
+systemctl show --property=UnitPath
+systemctl show --property=UnitPath | xargs ls
+systemctl show --property=UnitPath | xargs ls | grep -i network
+
+# Show the cgroup slice, memory and parent for a PID
+systemctl status <pid>
+
+# Units: services (.service), mount points (.mount), devices (.device) or sockets (.socket)
+# systemctl assumes .service if no suffix provided
+systemctl start unit
+systemctl stop unit
+systemctl restart unit
+systemctl reload unit
+systemctl status unit
+systemctl is-enabled unit
+systemctl is-active unit
+systemctl is-failed unit
+systemctl disable unit
+systemctl enable unit        # Enable a unit to be started on bootup
+systemctl enable --now unit  # Enable a unit to be started on bootup and Start immediately
+systemctl mask unit          # Mask a unit to make it impossible to start it, manually or as a dependency
+systemctl unmask unit
+systemctl help unit
+
+# Reload systemd manager configuration, scanning for new or changed units
+systemctl daemon-reload
+
+# Display unit file
+systemctl cat unit
+# Show unit properties
+systemctl show unit
+
+# List unit dependencies: include those units that are either required by wanted by the unit
+systemctl list-dependencies unit
+systemctl list-dependencies unit --all            # recursively list all dependencies
+systemctl list-dependencies unit --reverse        # units that depend on the specified unit
+systemctl list-dependencies unit --before         # units that depend on the specified unit starting before them
+systemctl list-dependencies unit --after          # units that depend on the specified unit starting after them
+systemctl list-dependencies network-online.target
+ 
+# Power management
+systemctl reboot
+systemctl poweroff
+systemctl suspend
+systemctl hibernate
+systemctl hybrid-sleep
+
+# Dependencies: Wants= and Requires= do not imply After=
+# Unit A requires Unit B to be running before A is started: in [Unit] section of A, add
+Requires=B
+After=B
+# If dependency is optional
+Wants=B
+After=B
+# Dependencies are typically placed on services and not on targets
+# For example, network.target is pulled in by whatever service configures your network interfaces, therefore
+# ordering your custom unit after it is sufficient since network.target is started anyway
+
+# To delay a service until after the network is up, include the following dependencies in the .service file
+[Unit]
+Wants=network-online.target
+After=network-online.target
+
+# Service types: [Service] section, Type= parameter
+Type=simple (default): systemd considers the service to be started up immediately. The process must not fork.
+                       Do not use this type if other services need to be ordered on this service, unless it is socket activated.
+Type=forking: systemd considers the service started up once the process forks and the parent has exited.
+              For classic daemons use this type unless you know that it is not necessary.
+              You should specify PIDFile= as well so systemd can keep track of the main process.
+Type=oneshot: this is useful for scripts that do a single job and then exit. You may want to set RemainAfterExit=yes
+              as well so that systemd still considers the service as active after the process has exited.
+Type=notify: identical to Type=simple, but with the stipulation that the daemon will send a signal to systemd when it is ready.
+              The reference implementation for this notification is provided by libsystemd-daemon.so.
+Type=dbus: the service is considered ready when the specified BusName appears on DBus's system bus.
+Type=idle: systemd will delay execution of the service binary until all jobs are dispatched.
+           Other than that behavior is very similar to Type=simple.
+
+# Targets: systemd uses targets to group units together via dependencies and as standardized synchronization points.
+# Get current targets
+systemctl list-units --type=target
+
+# Change current target: no effect on the next boot
+# start all of the units associated with a target and stop all units that are not part of the dependency tree
+systemctl list-dependencies the_target.target
+systemctl isolate the_target.target
+
+# Change default target to boot into
+# The standard target is default.target, which is a symlink to graphical.target
+systemctl get-default
+systemctl set-default <target>
+# Alternatively, append one of the following kernel parameters to your bootloader:
+systemd.unit=multi-user.target (which roughly corresponds to the old runlevel 3),
+systemd.unit=rescue.target (which roughly corresponds to the old runlevel 1).
+
+# Default target order: Systemd chooses the default.target according to the following order:
+Kernel parameter shown above
+Symlink of /etc/systemd/system/default.target
+Symlink of /usr/lib/systemd/system/default.target
+
+find / -name default.target
+
+# Mounting: systemd is in charge of mounting the partitions and filesystems specified in /etc/fstab. The systemd-fstab-generator(8)
+# translates all the entries in /etc/fstab into systemd units, this is performed at boot time and whenever the configuration of the
+# system manager is reloaded.
+
+# To read systemd log
+journalctl
+
+# To show messages from current boot
+journalctl -b -0
+# To show messages from previous boot
+journalctl -b -1
+# To show messages from the second previous boot
+journalctl -b -2
+
+# To show all messages from date (and optional time)
+journalctl --since="2020-06-28 12:00:00"
+# To show  all messages since 20 minutes ago
+journalctl --since "20 min ago"
+
+# To follow new messages
+journalctl -f
+
+# To show all messages by a specific executable
+journalctl /usr/lib/systemd/systemd
+
+# To show all messages by a specific process
+journalctl _PID=1
+
+# To show all messages by a specific unit
+journalctl -u docker.service
+
+# To show kernel ring buffer
+journalctl -k
+
+# To show only error, critical and alert priority messages
+journalctl -p err..alert
+# can use numeric log level too, like
+journalctl -p 3..1
+# If single number/log level is used, all higher priority log levels are also included (i.e. 0 to 3 in this case)
+journalctl -p 3
+
+# Priority levels
+Value    Severity      Keyword    Description
+0        Emergency     emerg      System is unusable
+1        Alert         alert      Should be corrected immediately
+2        Critical      crit       Critical conditions
+3        Error         err        Error conditions
+4        Warning       warning    May indicate that an error will occur if action is not taken
+5        Notice        notice     Events that are unusual, but not error conditions
+6        Informational info       Normal operational messages that require no action
+7        Debug         debug      Information useful to developers for debugging the application
+
+# To show auth.log equivalent by filtering on syslog facility
+journalctl SYSLOG_FACILITY=10
+
+# Facility
+Facility code     Keyword    Description
+0                 kern       Kernel messages
+1                 user       User-level messages
+2                 mail       Mail system
+3                 daemon     System daemons
+4                 auth       Security/authorization messages
+5                 syslog     Messages generated internally by syslogd
+6                 lpr        Line printer subsystem (archaic subsystem)
+7                 news       Network news subsystem (archaic subsystem)
+8                 uucp       UUCP subsystem (archaic subsystem)
+9                            Clock daemon
+10                authpriv   Security/authorization messages
+11                ftp        FTP daemon
+12                -          NTP subsystem
+13                -          Log audit
+14                -          Log alert
+15                cron       Scheduling daemon
+16                local0     Local use 0 (local0)
+17                local1     Local use 1 (local1)
+18                local2     Local use 2 (local2)
