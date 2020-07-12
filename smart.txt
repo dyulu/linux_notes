@@ -1,0 +1,49 @@
+# smartd: SMART Disk Monitoring Daemon
+# smartd [options]
+
+# smartd  will attempt to enable SMART monitoring on ATA devices (equivalent to smartctl -s on) and polls these and SCSI devices every 30 minutes (configurable),
+# logging SMART errors and changes of SMART Attributes via the SYSLOG interface.  The default location for these SYSLOG notifications and warnings is
+# system-dependent (typically /var/log/messages or /var/log/syslog).  To change this default location, please see the '-l' command-line option described below.
+
+# In  addition  to logging to a file, smartd can also be configured to send email warnings if problems are detected.
+
+# Configuration file
+/etc/smartd.conf
+systemctl status smartd      // /lib/systemd/system/smartd.service
+
+# Example config
+# -s (S/../.././02|L/../../6/03): Schedule the short self-test to run daily at 2:00 AM and the long test to run on Saturday’s at 3:00 AM.
+# -m root: If any errors occur, smartd will send email to root. Mail for root can be forwarded to normal email account.
+#          or replace root with a normal email address
+/dev/sda -a -d sat -o on -S on -s (S/../.././02|L/../../6/03) -m root -M exec /usr/share/smartmontools/smartd-runner
+
+#   -d TYPE Set the device type: ata, scsi, marvell, removable, 3ware,N, hpt,L/M/N
+#   -T TYPE set the tolerance to one of: normal, permissive
+#   -o VAL  Enable/disable automatic offline tests (on/off)
+#   -S VAL  Enable/disable attribute autosave (on/off)
+#   -n MODE No check. MODE is one of: never, sleep, standby, idle
+#   -H      Monitor SMART Health Status, report if failed
+#   -l TYPE Monitor SMART log.  Type is one of: error, selftest
+#   -f      Monitor for failure of any 'Usage' Attributes
+#   -m ADD  Send warning email to ADD for -H, -l error, -l selftest, and -f
+#   -M TYPE Modify email warning behavior (see man page)
+#   -s REGE Start self-test when type/date matches regular expression (see man page)
+#   -p      Report changes in 'Prefailure' Normalized Attributes
+#   -u      Report changes in 'Usage' Normalized Attributes
+#   -t      Equivalent to -p and -u Directives
+#   -r ID   Also report Raw values of Attribute ID with -p, -u or -t
+#   -R ID   Track changes in Attribute ID Raw value with -p, -u or -t
+#   -i ID   Ignore Attribute ID for -f Directive
+#   -I ID   Ignore Attribute ID for -p, -u or -t Directive
+#   -C ID   Report if Current Pending Sector count non-zero
+#   -U ID   Report if Offline Uncorrectable count non-zero
+#   -W D,I,C Monitor Temperature D)ifference, I)nformal limit, C)ritical limit
+#   -v N,ST Modifies labeling of Attribute N (see man page)
+#   -a      Default: equivalent to -H -f -t -l error -l selftest -C 197 -U 198
+#   -F TYPE Use firmware bug workaround. Type is one of: none, samsung
+#   -P TYPE Drive-specific presets: use, ignore, show, showall
+#    #      Comment: text after a hash sign is ignored
+#    \      Line continuation character
+# Attribute ID is a decimal integer 1 <= ID <= 255
+# except for -C and -U, where ID = 0 turns them off.
+# All but -d, -m and -M Directives are only implemented for ATA devices
