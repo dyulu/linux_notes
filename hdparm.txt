@@ -1,0 +1,78 @@
+# hdparm: get/set SATA/IDE device parameters
+# hdparm [options] [device ...]
+
+# Display information
+hdparm -I /dev/sda
+
+# Test drive speed
+$ hdparm -t /dev/sda
+/dev/sda:
+ Timing buffered disk reads: 1626 MB in  3.00 seconds = 541.85 MB/sec
+$ hdparm --direct -t /dev/sda
+/dev/sda:
+ Timing O_DIRECT disk reads: 1564 MB in  3.00 seconds = 520.83 MB/sec
+# --offset: Offsets to given number of GiB (1024*1024*1024) when performing -t timings of device reads.
+
+# Test drive cache read speed
+$ hdparm -T /dev/sda
+/dev/sda:
+ Timing cached reads:   14150 MB in  2.00 seconds = 7091.92 MB/sec
+
+# Enable read-ahead
+hdparm -A 1 /dev/sda
+# Disable read-ahead
+hdparm -A 0 /dev/sda
+# -a: Get/set  sector  count  for  filesystem  (software) read-ahead.
+
+# Display some basic settings
+$ hdparm -v /dev/sda
+/dev/sda:
+ multcount     =  0 (off)
+ IO_support    =  1 (32-bit)
+ readonly      =  0 (off)
+ readahead     = 256 (on)
+ geometry      = 15079/255/63, sectors = 242255664, start = 0
+
+# -B: Get/set  Advanced  Power  Management  feature, if the drive supports it. A low value means aggressive power management and a high
+      value means better performance.  Possible settings range from values 1 through 127  (which  permit  spin-down),  and  values  128
+      through  254  (which  do  not permit spin-down).  The highest degree of power management is attained with a setting of 1, and the
+      highest I/O performance with a setting of 254.  A value of 255 tells hdparm to disable Advanced Power  Management  altogether  on
+      the drive (not all drives support disabling it, but most do)
+
+# -C: Check  the  current IDE power mode status, which will always be one of unknown (drive does not support this command), active/idle
+      (normal operation), standby (low power mode, drive has spun down), or sleeping (lowest  power  mode,  drive  is  completely  shut
+      down).  The -S, -y, -Y, and -Z options can be used to manipulate the IDE power modes.
+
+# -r: Get/set read-only flag for the device.  When set, Linux disallows write operations on the device.
+
+# -R: Get/set Write-Read-Verify feature, if the drive supports it.  Usage: -R0 (disable) or -R1 (enable).
+
+# --read-sector: Reads from the specified sector number, and dumps the contents in hex to standard  output.
+
+# -m: Get/set sector count for multiple sector I/O on the drive.  A setting of 0 disables this feature.
+#     Permit the transfer of multiple sectors per I/O interrupt, rather than the usual one sector per interrupt.
+
+# -W: Get/set the IDE/SATA drive´s write-caching feature.
+
+# --fwdownload file_path: When used, this should be the only option given. The contents of this file will be sent to the drive using the
+#                         (S)ATA DOWNLOAD MICROCODE command, using either transfer protocol 7 (entire file at once), or, if the drive
+#                         supports it, transfer protocol 3 (segmented download).
+
+# --security-help: Display terse usage info for all of the --security-* options.
+# --security-set-pass PWD:
+#      Lock  the  drive, using password PWD (Set Password) (DANGEROUS).  Password is given as an ASCII string and is padded with NULs to
+#      reach 32 bytes.  Use the special password NULL to set an empty password.  The applicable drive  password  is  selected  with  the
+#      --user-master  switch  (default  is  "user" password) and the applicable security mode with the --security-mode switch.  No other
+#      options are permitted on the command line with this one.
+# --user-master USER:
+#      Specifies which password (user/master) to select.  Defaults to user password.  Only useful in combination with --security-unlock,
+#      --security-set-pass, --security-disable, --security-erase or --security-erase-enhanced.
+#         u       user password
+#         m       master password
+# --security-freeze
+# --security-prompt-for-password
+# --security-unlock PWD
+# --security-disable PWD
+# --security-erase PWD
+# --security-erase-enhanced PWD
+# --security-mode MODE
