@@ -1,0 +1,114 @@
+# blkid: locate/print block device attributes
+# blkid  --label label | --uuid uuid
+# blkid  [--no-encoding  --garbage-collect  --list-one  --cache-file  file] [--output format] [--match-tag tag] [--match-token NAME=value] [device ...]
+# blkid  --probe [--offset offset] [--output format] [--size size] [--match-tag tag] [--match-types list] [--usages list] device ...
+# blkid  --info [--output format] [--match-tag tag] device ...
+
+# lsblk: list information about all available or the specified block devices
+# lsblk [options] [device...]
+
+# List all devices, including empty devices and ramdisk devices
+$ lsblk -a
+NAME   MAJ:MIN RM   SIZE RO TYPE MOUNTPOINT
+sda      8:0    0   750G  0 disk 
+└─sda1   8:1    0   750G  0 part /data
+
+# -f, --fs: Output info about filesystems.
+#           Equivalent to -o NAME,FSTYPE,LABEL,UUID,MOUNTPOINT.
+$ lsblk --fs
+NAME      FSTYPE   LABEL UUID                                 FSAVAIL FSUSE% MOUNTPOINT
+sda                                                                          
+└─sda1    ext4           6e4f4fdc-be6b-451c-8bbe-fc17575c48ff    750G     2% /data
+
+# -t, --topology: Output info about block-device topology.
+#                 Equivalent to -o NAME,ALIGNMENT,MIN-IO,OPT-IO,PHY-SEC,LOG-SEC,ROTA,SCHED,RQ-SIZE,RA,WSAME.
+$ lsblk --topology
+NAME      ALIGNMENT MIN-IO OPT-IO PHY-SEC LOG-SEC ROTA SCHED       RQ-SIZE  RA WSAME
+loop0             0    512      0     512     512    1 mq-deadline     256 128    0B
+sda               0    512      0     512     512    0 noop            128 128    0B
+└─sda1            0    512      0     512     512    0 noop            128 128    0B
+pmem0             0   4096      0    4096     512    0                 128 128    0B
+└─pmem0p1         0   4096      0    4096     512    0                 128 128    0B
+nvme0n1           0    512      0     512     512    0 none           1023 128    0B
+
+# -m, --perms: Output info about device owner, group and mode.
+$ lsblk -m /dev/sda
+NAME    SIZE OWNER GROUP MODE
+sda     750G root  disk  brw-rw----
+└─sda1  750G root  disk  brw-rw----
+
+# -x, --sort column: Sort  output  lines  by  column.
+lsblk -a -x SIZE
+
+# -S, --scsi: Output info about SCSI devices only.
+$ lsblk -S
+NAME HCTL       TYPE VENDOR   MODEL             REV TRAN
+sda  2:0:0:0    disk VMware   Virtual disk     2.0  
+sdb  3:0:0:0    disk VMware   Virtual disk     2.0  spi
+sr0  0:0:0:0    rom  NECVMWar VMware IDE CDR00 1.00 ata
+
+# -P, --pairs: Produce output in the form of key="value" pairs.
+$ lsblk -aP
+NAME="sda" MAJ:MIN="8:0" RM="0" SIZE="750G" RO="0" TYPE="disk" MOUNTPOINT=""
+NAME="sda1" MAJ:MIN="8:1" RM="0" SIZE="750G" RO="0" TYPE="part" MOUNTPOINT="/data"
+
+# -o, --output list: Specify which output columns to print.
+# -O, --output-all: Output all available columns.
+# -J, --json:  Use JSON output format.
+# -b, --bytes: Print the SIZE column in bytes rather than in a human-readable format.
+# -p, --paths: Print full device paths.
+# -n, --noheadings: Do not print a header line.
+# -l, --list: Produce output in the form of a list
+# -d, --nodeps: Do not print holder devices or slaves.
+
+$ lsblk -o NAME,LABEL,MODEL,SERIAL,STATE,TRAN,SUBSYSTEMS,REV,VENDOR,ZONED /dev/sda
+NAME   LABEL MODEL            SERIAL STATE   TRAN SUBSYSTEMS      REV VENDOR   ZONED
+sda          Virtual disk            running      block:scsi:pci 2.0  VMware   none
+└─sda1                                            block:scsi:pci               none
+
+$ lsblk -o NAME,UUID,PARTTYPE,PARTLABEL,PARTUUID,PARTFLAGS,HOTPLUG /dev/sda
+NAME   UUID                                 PARTTYPE PARTLABEL PARTUUID                             PARTFLAGS HOTPLUG
+sda                                                                                                                 0
+└─sda1 a20d3cf6-6cbf-4668-9da7-a3d4a62a1ae0 0x83               2300957a-01                                          0
+
+# Device name and mount in JSON format
+lsblk --json --paths --output NAME,MOUNTPOINT
+# Number of block devices
+lsblk --json --paths --output NAME,MOUNTPOINT | jq ".blockdevices | length"
+# Block device names and mountpoints
+lsblk --json --paths  --output NAME,MOUNTPOINT | jq -r .blockdevices[].name
+lsblk --json --paths  --output NAME,MOUNTPOINT | jq -r .blockdevices[].mountpoint
+# NVDIMM device capacity
+lsblk --json /dev/pmem0 | jq --raw-output ".blockdevices[0].size"
+
+$ lsblk -o NAME 
+NAME
+loop0
+sda
+├─sda1
+├─sda2
+└─sda3
+$ lsblk -l -o NAME 
+NAME
+loop0
+sda
+sda1
+sda2
+sda3
+$ lsblk -l -o NAME --nodeps
+NAME
+loop0
+sda
+$ lsblk -l -o NAME --noheadings --nodeps
+loop0
+sda
+
+$ lsblk --noheadings --nodeps -o NAME,TYPE,RM
+loop0    loop  0
+sda      disk  0
+pmem0    disk  0
+nvme0n1  disk  0
+$ lsblk --noheadings --nodeps -o NAME,TYPE,RM | awk '/ disk\s+0$/ {print $1}'
+sda
+pmem0
+nvme0n1
