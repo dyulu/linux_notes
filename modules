@@ -1,0 +1,73 @@
+# lsmod: Show the status of modules in the Linux Kernel
+# showing the contents of /proc/modules, i.e., what kernel modules are currently loaded
+
+# modinfo: Show information about a Linux Kernel module
+# modinfo [-0] [-F field] [-k kernel] [modulename|filename...]
+# -0, --null: Use the ASCII zero character to separate field values, instead of a new line.
+# -F, --field: Only print this field value, one per line.
+# -k kernel: Provide information about a kernel other than the running one.
+
+# modprobe: Add and remove modules from the Linux Kernel. Preferred over insmod and rmmod.
+# -c, --showconfig: Dump out the effective configuration from the config directory and exit
+# -r, --remove: This option causes modprobe to remove rather than insert a module.
+
+# insmod: Simple program to insert a module into the Linux Kernel
+# insmod [filename] [module options...]
+
+# rmmod: Simple program to remove a module from the Linux Kernel
+# rmmod [-f] [-s] [-v] [modulename]
+# -v, --verbose
+# -f, --force
+# -s, --syslog
+
+# depmod: Generate modules.dep and map files.
+
+# Write kernel module: https://www.thegeekstuff.com/2013/07/write-linux-kernel-module/
+1. Installing the linux headers
+apt-get install build-essential linux-headers-$(uname -r)
+
+2. Implementing the driver
+#include <linux/module.h>    // included for all kernel modules
+#include <linux/kernel.h>    // included for KERN_INFO
+#include <linux/init.h>      // included for __init and __exit macros
+
+MODULE_LICENSE("GPL");
+MODULE_AUTHOR("Lakshmanan");
+MODULE_DESCRIPTION("A Simple Hello World module");
+
+static int __init hello_init(void)
+{
+    printk(KERN_INFO "Hello world!\n");
+    return 0;    // Non-zero return means that the module couldn't be loaded.
+}
+
+static void __exit hello_cleanup(void)
+{
+    printk(KERN_INFO "Cleaning up module.\n");
+}
+
+module_init(hello_init);
+module_exit(hello_cleanup);
+
+3. Creating Makefile
+obj-m += hello.o
+
+all:
+    make -C /lib/modules/$(shell uname -r)/build M=$(PWD) modules
+
+clean:
+    make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
+
+4. Making
+make will create hello.ko file.
+
+5. Insert or Remove the Sample Kernel Module
+# insmod hello.ko
+
+# dmesg | tail -1
+[ 8394.731865] Hello world!
+
+# rmmod hello.ko
+
+# dmesg | tail -1
+[ 8707.989819] Cleaning up module.
