@@ -1,0 +1,32 @@
+# df: display free disk space
+# df [-b | -h | -H | -k | -m | -g | -P] [-ailn] [-t] [-T type] [file | filesystem ...]
+# -a      Show all mount points
+# -l      Only display information about locally-mounted filesystems
+# -T      Only print out statistics for filesystems of the specified types
+df -H     # Human-readable, base 10
+df -h     # Human-readable, base 2
+df -T     # Display filesystem type
+df -t ext3
+df -h /dev/sda1
+df -hT /home
+
+
+# du: display disk usage statistics
+# du [-H | -L | -P] [-a | -s | -d depth] [-c] [-h | -k | -m | -g] [-x] [-I mask] [file ...]
+# -a      Display an entry for each file in a file hierarchy
+# -c      Display a grand total
+# -s      Display an entry for each specified file.  (Equivalent to -d 0)
+du
+du -h /etc
+du -ch ~/Desktop/*.png
+
+# To list top 10 directories eating disk space in /etc/
+du -a /etc/ | sort -n -r | head -n 10
+
+# To check memory usage
+free -m
+cat /proc/meminfo
+vmstat -s        # much like proc cmd
+top              # check memory and cpu usage per process
+htop             # shows memory usage along with various other details
+dmidecode -t 17  # hardware information about the installed RAM
