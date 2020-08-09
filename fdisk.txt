@@ -1,0 +1,132 @@
+# fdisk: format disk;  manipulate disk partition table
+# fdisk [options] device
+# fdisk -l [device...]
+
+# fdisk or parted: For disks < 2TB, often using MBR (Master Boot Record).
+# parted: For disks > 2TB, using GPT (GUID Partitioning Table).
+
+# View all disk partitions
+fdisk -l
+
+# View disk partition on device sda
+fdisk -l /dev/sda
+
+# Interactive mode
+$ fdisk /dev/sda
+Command (m for help): m
+
+Help:
+
+  DOS (MBR)
+   a   toggle a bootable flag
+   b   edit nested BSD disklabel
+   c   toggle the dos compatibility flag
+
+  Generic
+   d   delete a partition
+   F   list free unpartitioned space
+   l   list known partition types
+   n   add a new partition
+   p   print the partition table
+   t   change a partition type
+   v   verify the partition table
+   i   print information about a partition
+
+  Misc
+   m   print this menu
+   u   change display/entry units
+   x   extra functionality (experts only)
+
+  Script
+   I   load disk layout from sfdisk script file
+   O   dump disk layout to sfdisk script file
+
+  Save & Exit
+   w   write table to disk and exit
+   q   quit without saving changes
+
+  Create a new label
+   g   create a new empty GPT partition table
+   G   create a new empty SGI (IRIX) partition table
+   o   create a new empty DOS partition table
+   s   create a new empty Sun partition table
+
+# Format a partition with ext4 filesystem and mount it
+mkfs.ext4 /dev/sda1
+mkdir -p /mnt/sda1_mnt
+mount /dev/sda1 /mnt/sda1_mnt
+
+# Check the size of a partition
+fdisk -s /dev/sda0
+
+# fdisk --help
+
+Usage:
+ fdisk [options] <disk>      change partition table
+ fdisk [options] -l [<disk>] list partition table(s)
+
+Display or manipulate a disk partition table.
+
+Options:
+ -b, --sector-size <size>      physical and logical sector size
+ -B, --protect-boot            don't erase bootbits when creating a new label
+ -c, --compatibility[=<mode>]  mode is 'dos' or 'nondos' (default)
+ -L, --color[=<when>]          colorize output (auto, always or never)
+                                 colors are enabled by default
+ -l, --list                    display partitions and exit
+ -o, --output <list>           output columns
+ -t, --type <type>             recognize specified partition table type only
+ -u, --units[=<unit>]          display units: 'cylinders' or 'sectors' (default)
+ -s, --getsz                   display device size in 512-byte sectors [DEPRECATED]
+     --bytes                   print SIZE in bytes rather than in human readable format
+ -w, --wipe <mode>             wipe signatures (auto, always or never)
+ -W, --wipe-partitions <mode>  wipe signatures from new partitions (auto, always or never)
+
+ -C, --cylinders <number>      specify the number of cylinders
+ -H, --heads <number>          specify the number of heads
+ -S, --sectors <number>        specify the number of sectors per track
+
+ -h, --help                    display this help
+ -V, --version                 display version
+
+Available output columns:
+ gpt: Device Start End Sectors Size Type Type-UUID Attrs Name UUID
+ dos: Device Start End Sectors Cylinders Size Type Id Attrs Boot End-C/H/S Start-C/H/S
+ bsd: Slice Start End Sectors Cylinders Size Type Bsize Cpg Fsize
+ sgi: Device Start End Sectors Cylinders Size Type Id Attrs
+ sun: Device Start End Sectors Cylinders Size Type Id Flags
+
+# parted: a partition manipulation program
+# parted --help
+Usage: parted [OPTION]... [DEVICE [COMMAND [PARAMETERS]...]...]
+Apply COMMANDs with PARAMETERS to DEVICE.  If no COMMAND(s) are given, run in
+interactive mode.
+
+OPTIONs:
+  -h, --help                      displays this help message
+  -l, --list                      lists partition layout on all block devices
+  -m, --machine                   displays machine parseable output
+  -s, --script                    never prompts for user intervention
+  -v, --version                   displays the version
+  -a, --align=[none|cyl|min|opt]  alignment for new partitions
+
+COMMANDs:
+  align-check TYPE N                       check partition N for TYPE(min|opt) alignment
+  help [COMMAND]                           print general help, or help on COMMAND
+  mklabel,mktable LABEL-TYPE               create a new disklabel (partition table)
+  mkpart PART-TYPE [FS-TYPE] START END     make a partition
+  name NUMBER NAME                         name partition NUMBER as NAME
+  print [devices|free|list,all|NUMBER]     display the partition table, available devices, free space,
+                                           all found partitions, or a particular partition
+  quit                                     exit program
+  rescue START END                         rescue a lost partition near START and END
+  resizepart NUMBER END                    resize partition NUMBER
+  rm NUMBER                                delete partition NUMBER
+  select DEVICE                            choose the device to edit
+  disk_set FLAG STATE                      change the FLAG on selected device
+  disk_toggle [FLAG]                       toggle the state of FLAG on selected device
+  set NUMBER FLAG STATE                    change the FLAG on partition NUMBER
+  toggle [NUMBER [FLAG]]                   toggle the state of FLAG on partition NUMBER
+  unit UNIT                                set the default unit to UNIT
+  version                                  display the version number and copyright information
+  
