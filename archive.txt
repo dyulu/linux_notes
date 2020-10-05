@@ -45,3 +45,145 @@ tar -rvf my.tar.bz2 the-file
 #         extracting entries from the archive
 curl -L "https://server/archive.tgz" | tar -C /dest/dir/ -xz
 wget https://server/archive.tgz
+
+# gzip: Compress or uncompress FILEs (by default, compress FILES in-place)
+# Usage: gzip [OPTION]... [FILE]...
+  -c, --stdout      write on standard output, keep original files unchanged
+  -d, --decompress  decompress
+  -f, --force       force overwrite of output file and compress links
+  -h, --help        give this help
+  -k, --keep        keep (don't delete) input files
+  -l, --list        list compressed file contents
+  -L, --license     display software license
+  -n, --no-name     do not save or restore the original name and timestamp
+  -N, --name        save or restore the original name and timestamp
+  -q, --quiet       suppress all warnings
+  -r, --recursive   operate recursively on directories
+      --rsyncable   make rsync-friendly archive
+  -S, --suffix=SUF  use suffix SUF on compressed files
+      --synchronous synchronous output (safer if system crashes, but slower)
+  -t, --test        test compressed file integrity
+  -v, --verbose     verbose mode
+  -V, --version     display version number
+  -1, --fast        compress faster
+  -9, --best        compress better
+With no FILE, or when FILE is -, read standard input.
+
+gzip file_to_be_compressed   # create file_to_be_compressed.gz and delete file_to_be_compressed
+gzip -d file_to_be_compressed.gz # decompress
+gunzip file_to_be_compressed.gz  # decompress
+gunzip -c file_to_be_compressed.gz > decompressed_file  # decompress and keep the original gz file
+gzip -c file_to_be_compressed > compressed_file.gz  # create compressed_file.gz and keep file_to_be_compressed
+gzip file1 file2 file3       # create file1.gz, file2.gz and file3.gz, delete file1, file2 and file3
+gzip -r *                    # recursively compress all files into invidual gz file and remove originals
+gzip -dr *                   # recursive decompress
+
+# pigz: parallel implementation of gzip
+#       gzip for multi-processor, multi-core machines
+Usage: pigz [options] [files ...]
+  will compress files in place, adding the suffix '.gz'. If no files are
+  specified, stdin will be compressed to stdout. pigz does what gzip does,
+  but spreads the work over multiple processors and cores when compressing.
+
+Options:
+  -0 to -9, -11        Compression level (level 11, zopfli, is much slower)
+  --fast, --best       Compression levels 1 and 9 respectively
+  -b, --blocksize mmm  Set compression block size to mmmK (default 128K)
+  -c, --stdout         Write all processed output to stdout (won't delete)
+  -d, --decompress     Decompress the compressed input
+  -f, --force          Force overwrite, compress .gz, links, and to terminal
+  -F  --first          Do iterations first, before block split for -11
+  -h, --help           Display a help screen and quit
+  -i, --independent    Compress blocks independently for damage recovery
+  -I, --iterations n   Number of iterations for -11 optimization
+  -J, --maxsplits n    Maximum number of split blocks for -11
+  -k, --keep           Do not delete original file after processing
+  -K, --zip            Compress to PKWare zip (.zip) single entry format
+  -l, --list           List the contents of the compressed input
+  -L, --license        Display the pigz license and quit
+  -m, --no-time        Do not store or restore mod time
+  -M, --time           Store or restore mod time
+  -n, --no-name        Do not store or restore file name or mod time
+  -N, --name           Store or restore file name and mod time
+  -O  --oneblock       Do not split into smaller blocks for -11
+  -p, --processes n    Allow up to n compression threads (default is the
+                       number of online processors, or 8 if unknown)
+  -q, --quiet          Print no messages, even on error
+  -r, --recursive      Process the contents of all subdirectories
+  -R, --rsyncable      Input-determined block locations for rsync
+  -S, --suffix .sss    Use suffix .sss instead of .gz (for compression)
+  -t, --test           Test the integrity of the compressed input
+  -v, --verbose        Provide more verbose output
+  -V  --version        Show the version of pigz
+  -Y  --synchronous    Force output file write to permanent storage
+  -z, --zlib           Compress to zlib (.zz) instead of gzip format
+  --                   All arguments after "--" are treated as files
+
+
+pigz file_to_be_compressed      # creates file_to_be_compressed.gz and delete file_to_be_compressed
+pigz -k file_to_be_compressed   # creates file_to_be_compressed.gz and keep file_to_be_compressed
+pigz -l compressed_file.gz      # check the contents of the compressed file
+pigz -d compressed_file.gz      # decompress
+
+tar --use-compress-program="pigz -k " -cf directory.tar.gz dirrectory    # compress a directory
+unpigz directory.tar.gz
+pigz -d directory.tar.gz
+
+# cpio: copy in copy out, copy files between archives and directories
+#       used for processing the archive files like *.cpio or *.tar
+-o, --create: Copy-out. Read  a list of file names from the standard input and create on the standard output
+              (unless overridden by the --file option) an archive containing these files.
+-i, --extract: Copy-in. Read the archive from standard input (or from the file supplied with the --file option)
+               and extract files from  it,  or (if  the  -t  option is given) list its contents to the standard
+               output.  If one or more patterns are supplied, read or list only files matching these patterns.
+               The -t option alone implies -i.
+-p, --pass-through: Pass-through. Read a list of file names from the standard input and copy them to the specified
+               directory.
+-t, –list: Print a table of contents of all the inputs present
+
+-B: Changes the I/O block size to 5120 bytes.
+-c: Use the old portable (ASCII) archive format.
+-C, –io-size=NUMBER: Set the I/O block size to the given particular NUMBER of bytes.
+-D, –directory=DIR: Changes to Directory DIR.
+-H, –format=FORMAT: Use given arc.
+-v, –verbose: List the files processed in a particular task.
+-V, –dot: Print “.” for each file processed in a particular task.
+-W, –warning=FLAG: Control warning display. Currently FLAG is one of ‘none‘, ‘truncate‘, ‘all‘.
+
+cpio -o < name-list > archive
+cpio -i < archive
+cpio -p destination-directory < name-list
+
+# Archive all log files
+ls *.log | cpio -ov > logs.cpio
+find . -name "*.log" | cpio -ov > logs1.cpio
+# Create tar archive
+ls *.log | cpio -ov -H tar > logs.tar
+# Extract tar archive
+cpio -iv -F logs.tar
+
+# xz, unxz, xzcat, lzma, unlzma, lzcat - Compress or decompress .xz and .lzma files
+
+Usage: xz [OPTION]... [FILE]...
+Compress or decompress FILEs in the .xz format.
+
+  -z, --compress      force compression
+  -d, --decompress    force decompression
+  -t, --test          test compressed file integrity
+  -l, --list          list information about .xz files
+  -k, --keep          keep (don't delete) input files
+  -f, --force         force overwrite of output file and (de)compress links
+  -c, --stdout        write to standard output and don't delete input files
+  -0 ... -9           compression preset; default is 6; take compressor *and*
+                      decompressor memory usage into account before using 7-9!
+  -e, --extreme       try to improve compression ratio by using more CPU time;
+                      does not affect decompressor memory requirements
+  -T, --threads=NUM   use at most NUM threads; the default is 1; set to 0
+                      to use as many threads as there are processor cores
+  -q, --quiet         suppress warnings; specify twice to suppress errors too
+  -v, --verbose       be verbose; specify twice for even more verbose
+  -h, --help          display this short help and exit
+  -H, --long-help     display the long help (lists also the advanced options)
+  -V, --version       display the version number and exit
+
+With no FILE, or when FILE is -, read standard input.
