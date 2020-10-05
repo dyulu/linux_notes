@@ -1,0 +1,71 @@
+# Like cd, pushd takes you from one directory to another.
+# However, pushd echos your destination directory and your point of origin.
+# Directory stack: directories you visited using pushd.
+
+$ tree
+.
+├── one
+├── three
+│   └── three_one
+│       └── three_two
+└── two
+$ pushd one
+~/one ~
+$ pwd
+/root/one
+$ pushd ../three/three_one/three_two
+~/three/three_one/three_two ~/one ~
+$ pwd
+/root/three/three_one/three_two
+$ pushd /root/two
+~/two ~/three/three_one/three_two ~/one ~
+$ pwd
+/root/two
+$ popd
+~/three/three_one/three_two ~/one ~
+$ pwd
+/root/three/three_one/three_two
+$ popd
+~/one ~
+$ popd
+~
+$ pwd
+/root
+$ popd
+-bash: popd: directory stack empty
+
+
+$ dirs -v         # View the stack with index
+ 0  ~
+$ pushd +0        # View the stack. This will not change directory in the stack.
+~
+$ pushd +1
+-bash: pushd: directory stack empty
+$ pushd one
+~/one ~
+$ pushd /root/two
+~/two ~/one ~
+$ pushd /root/three
+~/three ~/two ~/one ~
+$ dirs -v
+ 0  ~/three
+ 1  ~/two
+ 2  ~/one
+ 3  ~
+$ pushd +0
+~/three ~/two ~/one ~
+$ pwd
+/root/three
+$ pushd +2
+~/one ~ ~/three ~/two
+$ pwd
+/root/one
+$ dirs -v
+ 0  ~/one
+ 1  ~
+ 2  ~/three
+ 3  ~/two
+$ popd +2
+~/one ~ ~/two
+# popd -0         # pop at the back of the stack. This does not change directory.
+~/one ~
