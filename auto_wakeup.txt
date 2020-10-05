@@ -1,0 +1,21 @@
+# Have a computer turn itself on using real-time clock (RTC) wakeups
+# APM: Advanced Power Management, older power management standard
+# ACPI: Advanced Configuration and Power Interface
+# BIOS Power Management settings: wakeup alarm
+
+# Reset the alarm to 0
+echo 0 > /sys/class/rtc/rtc0/wakealarm
+cat /sys/class/rtc/rtc0/wakealarm          # No value will be returned
+
+# Shut down computer and have it wakeup 10 minutes after the shutdown
+# Disable hwclock updates: most Linux distributions write the current system time back to the RTC when shutting
+#                          down the machine. With most RTCs, the machine will not wake up if the hardware clock
+#                          has been modified after the wakeup alarm has been set. To avoid this, it is necessary
+#                          to disable the writing of the current system time to the RTC by the system shutdown
+#                          scripts.
+ntpdate ntp.ubuntu.com                     # set the date and time via NTP, Network Time Protocol
+hwclock -s                                 # -s, --hctosys: set the System Clock from the Hardware Clock
+echo `date '+%s' -d '+ 10 minutes'` > /sys/class/rtc/rtc0/wakealarm
+cat /sys/class/rtc/rtc0/wakealarm          # Epoch time for 10 minutes in the future
+shutdown                                   # Halt the computer
+cat /sys/class/rtc/rtc0/wakealarm          # Computer will turn itself on after 10 min. No value will be returned
