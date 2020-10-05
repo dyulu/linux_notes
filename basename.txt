@@ -1,0 +1,213 @@
+# basename: Print NAME with any leading directory components removed.  If specified, also remove a trailing SUFFIX
+# -a, --multiple: support multiple arguments and treat each as a NAME
+# -s, --suffix=SUFFIX: remove a trailing SUFFIX; implies -a
+# -z, --zero: end each output line with NUL, not newline
+
+$ basename /usr/bin/sort
+sort
+$ basename /usr/bin/
+bin
+$ basename /usr/bin
+bin
+
+$ basename /usr/include/stdio.h
+stdio.h
+$ basename /usr/include/stdio.h .h
+stdio
+$ basename /usr/include/stdio.h h
+stdio.
+$ basename -s .h /usr/include/stdio.h
+stdio
+$ basename -s h /usr/include/stdio.h
+stdio.
+
+$ basename /usr/bin/sort /usr/include/stdio.h
+sort
+$ basename -a /usr/bin/sort /usr/include/stdio.h
+sort
+stdio.h
+$ basename -a -s .h /usr/bin/sort /usr/include/stdio.h
+sort
+stdio
+$ basename -s .h /usr/bin/sort /usr/include/stdio.h
+sort
+stdio
+$ basename -s .h /usr/bin/sort /usr/include/stdio.h /usr/include/jq.h
+sort
+stdio
+jq
+
+# dirname: strip last component from file name
+#          Output each NAME with its last non-slash component and trailing slashes removed;
+#          if NAME contains no /'s, output '.' (meaning the current directory).
+# -z, --zero: end each output line with NUL, not newline
+$ dirname /usr/bin/sort
+/usr/bin
+$ dirname /usr/bin/
+/usr
+$ dirname /usr/bin
+/usr
+$ dirname /usr/include/stdio.h
+/usr/include
+$ dirname stdio.h
+.
+$ dirname /usr/bin/sort /usr/include/stdio.h /usr/include/jq.h
+/usr/bin
+/usr/include
+/usr/include
+$ dirname -z /usr/bin/sort /usr/include/stdio.h /usr/include/jq.h
+/usr/bin/usr/include/usr/include
+
+# readlink: print resolved symbolic links or canonical file names
+#           show the actual path of the symbolic link
+$ readlink --help
+Usage: readlink [OPTION]... FILE...
+Print value of a symbolic link or canonical file name
+
+  -f, --canonicalize            canonicalize by following every symlink in
+                                every component of the given name recursively;
+                                all but the last component must exist
+  -e, --canonicalize-existing   canonicalize by following every symlink in
+                                every component of the given name recursively,
+                                all components must exist
+  -m, --canonicalize-missing    canonicalize by following every symlink in
+                                every component of the given name recursively,
+                                without requirements on components existence
+  -n, --no-newline              do not output the trailing delimiter
+  -q, --quiet
+  -s, --silent                  suppress most error messages (on by default)
+  -v, --verbose                 report error messages
+  -z, --zero                    end each output line with NUL, not newline
+
+# realpath: print the resolved absolute file name; all but the last component must exist
+$ realpath --help
+Usage: realpath [OPTION]... FILE...
+Print the resolved absolute file name;
+all but the last component must exist
+
+  -e, --canonicalize-existing  all components of the path must exist
+  -m, --canonicalize-missing   no path components need exist or be a directory
+  -L, --logical                resolve '..' components before symlinks
+  -P, --physical               resolve symlinks as encountered (default)
+  -q, --quiet                  suppress most error messages
+      --relative-to=DIR        print the resolved path relative to DIR
+      --relative-base=DIR      print absolute paths unless paths below DIR
+  -s, --strip, --no-symlinks   don't expand symlinks
+  -z, --zero                   end each output line with NUL, not newline
+
+$ pwd
+/root
+$ mkdir -p dir1/dir2/dir3
+$ touch dir1/dir2/dir3/file_in_dir3.txt
+$ ln -s dir1/dir2/dir3/file_in_dir3.txt linked_to_file_in_dir3
+$ ln -s dir1/dir2/dir3/file_in_dir3.txt dir1/dir2/dir3/linked_to_file_in_dir3_too                                    # Does not exist
+$ ln -s dir1/dir2/dir3/linked_to_file_in_dir3_too link_to_link_file_in_dir3                                          # Does not exist
+$ ln -s /root/dir1/dir2/dir3/file_in_dir3.txt /root/dir1/dir2/dir3/linked_to_file_in_dir3_too_2
+$ ln -s dir1/dir2/dir3/linked_to_file_in_dir3_too_2 link_to_link_file_in_dir3_2
+ls -lart link*
+lrwxrwxrwx 1 root root 31 Oct  4 17:17 linked_to_file_in_dir3 -> dir1/dir2/dir3/file_in_dir3.txt
+lrwxrwxrwx 1 root root 41 Oct  4 17:22 link_to_link_file_in_dir3 -> dir1/dir2/dir3/linked_to_file_in_dir3_too        # Does not exist
+lrwxrwxrwx 1 root root 43 Oct  4 17:55 link_to_link_file_in_dir3_2 -> dir1/dir2/dir3/linked_to_file_in_dir3_too_2
+$ ls -lart dir1/dir2/dir3/linked_to_file_in_dir3_too*
+lrwxrwxrwx 1 root root 31 Oct  4 17:20 dir1/dir2/dir3/linked_to_file_in_dir3_too -> dir1/dir2/dir3/file_in_dir3.txt  # Does not exist
+lrwxrwxrwx 1 root root 37 Oct  4 17:52 dir1/dir2/dir3/linked_to_file_in_dir3_too_2 -> /root/dir1/dir2/dir3/file_in_dir3.txt
+
+$ readlink linked_to_file_in_dir3
+dir1/dir2/dir3/file_in_dir3.txt
+$ readlink -f linked_to_file_in_dir3
+/root/dir1/dir2/dir3/file_in_dir3.txt
+$ readlink -e linked_to_file_in_dir3
+/root/dir1/dir2/dir3/file_in_dir3.txt
+$ readlink -m linked_to_file_in_dir3
+/root/dir1/dir2/dir3/file_in_dir3.txt
+
+$ readlink link_to_link_file_in_dir3
+dir1/dir2/dir3/linked_to_file_in_dir3_too
+$ readlink dir1/dir2/dir3/linked_to_file_in_dir3_too
+dir1/dir2/dir3/file_in_dir3.txt
+$ readlink dir1/dir2/dir3/file_in_dir3.txt
+$ readlink -f link_to_link_file_in_dir3
+$ readlink -e link_to_link_file_in_dir3
+$ readlink -m link_to_link_file_in_dir3
+/root/dir1/dir2/dir3/dir1/dir2/dir3/file_in_dir3.txt
+
+$ readlink dir1/dir2/dir3/linked_to_file_in_dir3_too
+dir1/dir2/dir3/file_in_dir3.txt
+$ readlink -f dir1/dir2/dir3/linked_to_file_in_dir3_too
+$ readlink -e dir1/dir2/dir3/linked_to_file_in_dir3_too
+$ readlink -m dir1/dir2/dir3/linked_to_file_in_dir3_too
+/root/dir1/dir2/dir3/dir1/dir2/dir3/file_in_dir3.txt
+
+$ readlink link_to_link_file_in_dir3_2
+dir1/dir2/dir3/linked_to_file_in_dir3_too_2
+$ readlink -f link_to_link_file_in_dir3_2
+/root/dir1/dir2/dir3/file_in_dir3.txt
+$ readlink -e link_to_link_file_in_dir3_2
+/root/dir1/dir2/dir3/file_in_dir3.txt
+$ readlink -m link_to_link_file_in_dir3_2
+/root/dir1/dir2/dir3/file_in_dir3.txt
+
+$ readlink dir1/dir2/dir3/linked_to_file_in_dir3_too_2
+/root/dir1/dir2/dir3/file_in_dir3.txt
+$ readlink -f dir1/dir2/dir3/linked_to_file_in_dir3_too_2
+/root/dir1/dir2/dir3/file_in_dir3.txt
+$ readlink -e dir1/dir2/dir3/linked_to_file_in_dir3_too_2
+/root/dir1/dir2/dir3/file_in_dir3.txt
+$ readlink -m dir1/dir2/dir3/linked_to_file_in_dir3_too_2
+/root/dir1/dir2/dir3/file_in_dir3.txt
+
+
+$ realpath linked_to_file_in_dir3
+/root/dir1/dir2/dir3/file_in_dir3.txt
+$ realpath -e linked_to_file_in_dir3
+/root/dir1/dir2/dir3/file_in_dir3.txt
+$ realpath -m linked_to_file_in_dir3
+/root/dir1/dir2/dir3/file_in_dir3.txt
+$ realpath -L linked_to_file_in_dir3
+/root/dir1/dir2/dir3/file_in_dir3.txt
+$ realpath -P linked_to_file_in_dir3
+/root/dir1/dir2/dir3/file_in_dir3.txt
+
+$ realpath link_to_link_file_in_dir3
+realpath: link_to_link_file_in_dir3: No such file or directory
+$ realpath -e link_to_link_file_in_dir3
+realpath: link_to_link_file_in_dir3: No such file or directory
+$ realpath -m link_to_link_file_in_dir3
+/root/dir1/dir2/dir3/dir1/dir2/dir3/file_in_dir3.txt
+$ realpath -L link_to_link_file_in_dir3
+realpath: link_to_link_file_in_dir3: No such file or directory
+$ realpath -P link_to_link_file_in_dir3
+realpath: link_to_link_file_in_dir3: No such file or directory
+
+$ realpath dir1/dir2/dir3/linked_to_file_in_dir3_too
+realpath: dir1/dir2/dir3/linked_to_file_in_dir3_too: No such file or directory
+$ realpath -e dir1/dir2/dir3/linked_to_file_in_dir3_too
+realpath: dir1/dir2/dir3/linked_to_file_in_dir3_too: No such file or directory
+$ realpath -m dir1/dir2/dir3/linked_to_file_in_dir3_too
+/root/dir1/dir2/dir3/dir1/dir2/dir3/file_in_dir3.txt
+$ realpath -L dir1/dir2/dir3/linked_to_file_in_dir3_too
+realpath: dir1/dir2/dir3/linked_to_file_in_dir3_too: No such file or directory
+$ realpath -P dir1/dir2/dir3/linked_to_file_in_dir3_too
+realpath: dir1/dir2/dir3/linked_to_file_in_dir3_too: No such file or directory
+
+$ realpath link_to_link_file_in_dir3_2
+/root/dir1/dir2/dir3/file_in_dir3.txt
+$ realpath -e link_to_link_file_in_dir3_2
+/root/dir1/dir2/dir3/file_in_dir3.txt
+$ realpath -m link_to_link_file_in_dir3_2
+/root/dir1/dir2/dir3/file_in_dir3.txt
+$ realpath -L link_to_link_file_in_dir3_2
+/root/dir1/dir2/dir3/file_in_dir3.txt
+$ realpath -P link_to_link_file_in_dir3_2
+/root/dir1/dir2/dir3/file_in_dir3.txt
+
+$ realpath dir1/dir2/dir3/linked_to_file_in_dir3_too_2
+/root/dir1/dir2/dir3/file_in_dir3.txt
+$ realpath -e dir1/dir2/dir3/linked_to_file_in_dir3_too_2
+/root/dir1/dir2/dir3/file_in_dir3.txt
+$ realpath -m dir1/dir2/dir3/linked_to_file_in_dir3_too_2
+/root/dir1/dir2/dir3/file_in_dir3.txt
+$ realpath -L dir1/dir2/dir3/linked_to_file_in_dir3_too_2
+/root/dir1/dir2/dir3/file_in_dir3.txt
+$ realpath -P dir1/dir2/dir3/linked_to_file_in_dir3_too_2
+/root/dir1/dir2/dir3/file_in_dir3.txt
