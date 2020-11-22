@@ -1,0 +1,181 @@
+# Configure the Docker daemon using a JSON file:
+/etc/docker/daemon.json
+
+$ docker system --help
+Usage:    docker system COMMAND
+Manage Docker
+Commands:
+  df          Show docker disk usage
+  events      Get real time events from the server
+  info        Display system-wide information
+  prune       Remove unused data
+Run 'docker system COMMAND --help' for more information on a command.
+
+docker ps                                   # Show only running containers
+docker ps -a                                # List all containers 
+
+docker pull                                 # Pull the image without running it
+docker push container_name[:TAG]            # Push an image or a repository to a registry
+
+docker start docker_name/id                 # Start one or more stopped containers
+docker restart docker_name/id
+docker stop container_name
+docker attach docker_name/id
+docker rm container_name
+
+docker rename CONTAINER NEW_NAME            # Rename a container
+docker tag SOURCE_IMAGE[:TAG] TARGET_IMAGE[:TAG]
+
+docker kill [OPTIONS] CONTAINER [CONTAINER...]
+docker pause CONTAINER [CONTAINER...]       # Pause all processes within one or more containers
+docker unpause CONTAINER [CONTAINER...]
+docker wait CONTAINER [CONTAINER...]        # Block until one or more containers stop, then print their exit codes
+
+docker images                               # List images in your system
+docker rmi image_name                       # Remove images you don’t want on your system
+
+docker inspect container_name/id            # Get low-level info on docker object
+docker inspect volume_name/network_name
+docker network inspect bridge
+
+docker stats -a                             # Display a live stream of container resource usage statistics
+docker top container_name/id                # Display the running processes of a container
+
+docker history image_name                   # Show history of an image
+
+docker diff container_name/id               # List changed files/directories in container᾿s FS since its creation
+docker export container_name/id             # Export a container’s filesystem as a tar archive
+docker import [OPTIONS] file|URL|- [REPOSITORY[:TAG]]
+docker load [OPTIONS]                       # Load an image from a tar archive or STDIN
+docker save image [image...]                # Save one or more images to a tar archive (streamed to STDOUT by default)
+
+docker container ls
+docker volume ls
+docker network ls
+
+docker network create --driver bridge my_bridge_network
+docker run --rm -d --network host --name my_nginx nginx  # http://localhost:80/
+docker network create -d overlay my_overlay_name
+docker network create -d macvlan --subnet=172.16.86.0/24 --gateway=172.16.86.1 -o parent=eth0 my_macvlan_network
+
+docker volume create my_volume
+
+docker rmi $(docker images --filter "dangling=true" -q --no-trunc)
+docker rmi $(docker images | grep "none" | awk '/ / { print $3 }')
+docker rm $(docker ps -qa --no-trunc --filter "status=exited")
+docker network rm $(docker network ls | grep "bridge" | awk '/ / { print $1 }')
+docker volume rm $(docker volume ls -qf dangling=true)
+docker volume ls -qf dangling=true | xargs -r docker volume rm
+
+docker port CONTAINER [PRIVATE_PORT[/PROTO]]  # List port mappings or a specific mapping for the container
+
+docker login [OPTIONS] [SERVER]             # Log in to a Docker registry
+docker logout [SERVER]                      # Log out from a Docker registry
+
+docker run nginx                            # Run latest nginx image; nginx:version_tag for specific version
+docker run ubuntu sleep 100                 # Run a command when start the container
+docker exec container_name cat /etc/hosts   # Run a command in your container
+docker exec -u 0 -it container_name bash
+
+# Spin up a container to view the contents of docker volume vol_name
+docker run --rm -it -v vol_name:/vol_name alpine /bin/sh
+# View the contents of docker volume vol_name via http
+docker run --name vol_viewer -v vol_name:/usr/share/nginx/html:ro -d -p 80:80 nginx
+# Use password-less ssh, which was set up on host, in container to run ansible playbook
+docker run --rm --mount type=bind,src=${HOME}/.ssh,target=/root/.ssh,readonly ansible_runner ansible-playbook playbook.yaml
+
+# Use a .dockerignore file to exclude files/directories from the context
+# docker build [OPTIONS] PATH | URL | -
+--add-host            Add a custom host-to-IP mapping (host:ip)
+--build-arg           Set build-time variables
+--cache-from          Images to consider as cache sources
+--cpuset-cpus         CPUs in which to allow execution (0-3, 0,1)
+--cpuset-mems         MEMs in which to allow execution (0-3, 0,1)
+--file , -f           Name of the Dockerfile (Default is ‘PATH/Dockerfile’)
+--force-rm            Always remove intermediate containers
+--label               Set metadata for an image
+--memory , -m         Memory limit
+--memory-swap         Swap limit equal to memory plus swap: ‘-1’ to enable unlimited swap
+--network             Set the networking mode for the RUN instructions during build
+--no-cache            Do not use cache when building the image
+--output , -o         Output destination (format: type=local,dest=path)
+--quiet , -q          Suppress the build output and print image ID on success
+--rm    true          Remove intermediate containers after a successful build
+--tag , -t            Name and optionally a tag in the ‘name:tag’ format
+
+# docker run [OPTIONS] IMAGE [COMMAND] [ARG...]
+--add-host            Add a custom host-to-IP mapping (host:ip)
+--attach , -a         Attach to STDIN, STDOUT or STDERR
+--cap-add             Add Linux capabilities
+--cap-drop            Drop Linux capabilities
+--cpus                Number of CPUs
+--cpuset-cpus         CPUs in which to allow execution (0-3, 0,1)
+--cpuset-mems         MEMs in which to allow execution (0-3, 0,1)
+--detach , -d         Run container in background and print container ID
+--entrypoint          Overwrite the default ENTRYPOINT of the image
+--env , -e            Set environment variables
+--env-file            Read in a file of environment variables
+--expose              Expose a port or a range of ports
+--hostname , -h       Container host name
+--interactive , -i    Keep STDIN open even if not attached
+--ip                  IPv4 address (e.g., 172.30.100.104)
+--ip6                 IPv6 address (e.g., 2001:db8::33)
+--log-driver          Logging driver for the container
+--log-opt             Log driver options
+--mount               Attach a filesystem mount to the container
+--name                Assign a name to the container
+--net                 Connect a container to a network
+--net-alias           Add network-scoped alias for the container
+--network             Connect a container to a network
+--network-alias       Add network-scoped alias for the container
+--privileged          Give extended privileges to this container
+--publish , -p        Publish a container’s port(s) to the host
+--publish-all , -P    Publish all exposed ports to random ports
+--restart    no       Restart policy to apply when a container exits
+--rm                  Automatically remove the container when it exits
+--tty , -t            Allocate a pseudo-TTY
+--user , -u           Username or UID (format: <name|uid>[:<group|gid>])
+--volume , -v         Bind mount a volume
+--volume-driver       Optional volume driver for the container
+--volumes-from        Mount volumes from the specified container(s)
+--workdir , -w        Working directory inside the container
+
+# docker exec [OPTIONS] CONTAINER COMMAND [ARG...]: runs a new command in a running container
+--detach , -d         Detached mode: run command in the background
+--detach-keys         Override the key sequence for detaching a container
+--env , -e            Set environment variables
+--interactive , -i    Keep STDIN open even if not attached
+--privileged          Give extended privileges to the command
+--tty , -t            Allocate a pseudo-TTY
+--user , -u           Username or UID (format: <name|uid>[:<group|gid>])
+--workdir , -w        Working directory inside the container
+
+# docker logs [options] container_name/id   # Fetch container logs
+--details: Show extra details provided to logs
+--follow , -f: Follow log output
+--since: Show logs since timestamp (e.g. 2013-01-02T13:23:37) or relative (e.g. 42m for 42 minutes)
+--tail all: Number of lines to show from the end of the logs
+--timestamps , -t: Show timestamps
+--until: Show logs before a timestamp (e.g. 2013-01-02T13:23:37) or relative (e.g. 42m for 42 minutes)
+
+# docker cp [OPTIONS] CONTAINER:SRC_PATH DEST_PATH|-
+# docker cp [OPTIONS] SRC_PATH|- CONTAINER:DEST_PATH
+--archive , -a        Archive mode (copy all uid/gid information)
+--follow-link , -L    Always follow symbol link in SRC_PATH
+
+# docker update [OPTIONS] CONTAINER [CONTAINER...]: use to prevent containers from consuming too many resources from Docker host
+--blkio-weight        Block IO (relative weight), between 10 and 1000, or 0 to disable (default 0)
+--cpu-period          Limit CPU CFS (Completely Fair Scheduler) period
+--cpu-quota           Limit CPU CFS (Completely Fair Scheduler) quota
+--cpu-rt-period       Limit the CPU real-time period in microseconds
+--cpu-rt-runtime      Limit the CPU real-time runtime in microseconds
+--cpu-shares , -c     CPU shares (relative weight)
+--cpus                Number of CPUs
+--cpuset-cpus         CPUs in which to allow execution (0-3, 0,1)
+--cpuset-mems         MEMs in which to allow execution (0-3, 0,1)
+--kernel-memory       Kernel memory limit
+--memory , -m         Memory limit
+--memory-reservation  Memory soft limit
+--memory-swap         Swap limit equal to memory plus swap: ‘-1’ to enable unlimited swap
+--pids-limit          Tune container pids limit (set -1 for unlimited)
+--restart             Restart policy to apply when a container exits
