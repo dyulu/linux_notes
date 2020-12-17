@@ -4,6 +4,12 @@
 # blkid  --probe [--offset offset] [--output format] [--size size] [--match-tag tag] [--match-types list] [--usages list] device ...
 # blkid  --info [--output format] [--match-tag tag] device ...
 
+$ ls /dev/disk
+by-id  by-path  by-uuid
+# ls /dev/disk/by-id
+# ls /dev/disk/by-path
+ls /dev/disk/by-uuid
+
 # lsblk: list information about all available or the specified block devices
 # lsblk [options] [device...]
 
