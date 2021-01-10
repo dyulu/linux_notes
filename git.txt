@@ -1,0 +1,358 @@
+# Git Config:
+# System: /etc/gitconfig 
+# Global: ~/.gitconfig or ~/.config/git/config 
+# Local: config file in the Git directory (that is, .git/config) of whatever repository you’re currently using 
+git config --global user.name "John Doe"
+git config --global user.email johndoe@example.com
+git config --global core.editor emacs
+git config --list
+
+# Initializing a Repository in an Existing Directory: 
+git init: go to the directory and run
+
+# Cloning an Existing Repository: 
+git clone https://github.com/linux-test-project/ltp.git
+git clone --bare https://github.com/linux-test-project/ltp.git
+The git clone command implicitly adds the origin remote for you
+
+# Checking the Status of Your Files: 
+git status
+git status -s  # short version of the status
+
+# Viewing Your Staged and Unstaged Changes: 
+git diff            # see what you’ve changed but not yet staged 
+git diff –staged.   # see what you’ve staged that will go into your next commit
+--staged and --cached are the same
+
+# Git diff on an external tool:
+git difftool --tool-help                         # to see what tools are available
+git difftool -y --tool=vimdiff ef2c1f9^ ef2c1f9  # compare a commit and its parent
+
+# Using tkdiff in git:
+git difftool –tool=tkdiff -y mycommit
+git difftool --tool=kdiff3 -y -- myfile
+
+# Removing Files:
+rm: simply remove the file from your working directory, but it shows up under the “Changes not staged for commit”.
+git rm: stages the file’s removal 
+git rm --cached: keep the file on your hard drive but not have Git track it anymore
+
+# Moving Files: 
+git mv file_from file_to
+Same as three steps:
+  $ mv README.md README
+  $ git rm README.md
+  $ git add README
+
+# Viewing the Commit History:
+git log
+git log -p                # --patch show diffs too
+git log -p -2             # only show latest two commits
+git log --stat
+git log --pretty=oneline  # short, full, fuller
+git log --pretty=format   # lists some of the more useful options that format takes. 
+git log --since=2.weeks:  # time-limiting options such as --since and --until are very useful
+git log -S function_name: # find the last commit that added or removed a reference to a specific function
+
+# Show tag ordered by date:
+git log --tags --simplify-by-decoration --pretty="format:%ai %d"
+git log --pretty=format:"%h - %an, %ar : %s"
+
+# Useful options for git log --pretty=format:
+Option    Description of Output
+%H    Commit hash
+%h    Abbreviated commit hash
+%T    Tree hash
+%t    Abbreviated tree hash
+%P    Parent hashes
+%p    Abbreviated parent hashes
+%an   Author name
+%ae   Author email
+%ad   Author date (format respects the --date=option)
+%ar   Author date, relative
+%cn   Committer name
+%ce   Committer email
+%cd   Committer date
+%cr   Committer date, relative
+%s    Subject
+
+# Common options to git log:
+Option           Description
+-p               Show the patch introduced with each commit.
+--stat           Show statistics for files modified in each commit.
+--shortstat      Display only the changed/insertions/deletions line from the --stat command.
+--name-only      Show the list of files modified after the commit information.
+--name-status    Show the list of files affected with added/modified/deleted information as well.
+--abbrev-commit  Show only the first few characters of the SHA-1 checksum instead of all 40.
+--relative-date  Display the date in a relative format (for example, “2 weeks ago”) instead of using the full date format.
+--graph          Display an ASCII graph of the branch and merge history beside the log output.
+--pretty         Show commits in an alternate format. Options include oneline, short, full, fuller, and format (where you specify your own format).
+--oneline        Shorthand for --pretty=oneline --abbrev-commit used together.
+
+# Options to limit the output of git log: 
+-<n>                Show only the last n commits
+--since, --after    Limit the commits to those made after the specified date.
+--until, --before   Limit the commits to those made before the specified date.
+--author            Only show commits in which the author entry matches the specified string.
+--committer         Only show commits in which the committer entry matches the specified string.
+--grep              Only show commits with a commit message containing the string
+-S                  Only show commits adding or removing code matching the string
+
+# Undoing Things:
+The following will end up with a single commit, i.e., 2nd replaces the 1st
+   git commit -m 'initial commit'
+   git add forgotten_file
+   git commit --amend
+
+# Unstaging a Staged File: 
+git reset HEAD <file>
+
+# Unmodifying a Modified File:
+git checkout -- <file> 
+
+# Working with Remotes: 
+git remote: see which remote servers you have configured
+-v: shows you the URLs that Git has stored for the shortname to be used when reading and writing to that remote 
+git remote add <shortname> <url>: add a new remote Git repository as a shortname you can reference easily
+git fetch <remote>: get data from your remote projects
+git pull: fetches data from the server you originally cloned from and automatically tries to merge it into the code you’re currently working on 
+git push <remote> <branch>: push to remote
+git remote show <remote>: inspect remote
+git remote rename: change a remote’s shortname
+
+# Tagging:
+git tag: list your tag; can have -l or --list for some pattern
+git tag <tagname>: create a lightweight tag; don’t supply any of the -a, -s, or -m options 
+git push origin <tagname>: by default, git push doesn’t transfer tags to remote servers
+git push --tags: push up a lot of tags at once 
+git tag -d <tagname>: delete a tag locally; In order to update any remotes, use git push <remote> :refs/tags/<tagname> 
+To view the versions of files a tag is pointing to, you can do a git checkout, though this puts your repository in “detached HEAD” state
+
+# Git Aliases: 
+git config --global alias.unstage 'reset HEAD --'
+This makes the following the same:
+git unstage fileA
+git reset HEAD -- fileA
+
+git config --global alias.last 'log -1 HEAD' 
+Now git last will show the last commit
+
+git config --global alias.graph “log --all --decorate --oneline --graph”
+git graph
+
+git config --global alias.lg1 “log --graph --abbrev-commit --decorate --format=format:'%C(bold blue)%h%C(reset) - %C(bold green)(%ar)%C(reset) %C(white)%s%C(reset) %C(dim white)- %an%C(reset)%C(bold yellow)%d%C(reset)' --all”
+
+# Get one file from the master:
+git fetch: download all the recent changes, but it will not put it in your current checked out code (working area)
+git checkout origin/master -- path/to/file: update the working tree with the particular file from the downloaded changes (origin/master)
+
+# List the file names that changed between two commits:
+git diff --name-only SHA1 SHA2: only need to include enough of the SHA to identify the commits
+git diff --name-only HEAD~10 HEAD~5: see the differences between the tenth latest commit and the fifth latest (or so).
+git show --name-only SHA1
+git diff --name-status [TAG|SHA1]: show what operations were done to the files too
+git diff --name-status [SHA1 [SHA2]]: like --name-only, except you get a simple prefix telling you what happened to the file (modified, deleted, added...)
+git log --name-status --oneline [SHA1..SHA2]: similar, but commits are listed after the commit message, so you can see when a file was changed.
+  -- <filename> [<filename>...]: interested in just what happened to certain files/folders
+git log --name-status --oneline [SHA1^..SHA1]: see what happened for a single commit, call it SHA1
+
+# File status flags:
+M modified - File has been modified
+C copy-edit - File has been copied and modified
+R rename-edit - File has been renamed and modified
+A added - File has been added
+D deleted - File has been deleted
+U unmerged - File has conflicts after a merge 
+
+# The command "git diff" shows differences between git versions. You can ask it to show differences between:
+git diff: the current version checked out from the respository and all files in the working directory
+git diff v2.6.21: a specific historical version and all files in the working directory
+git diff v2.6.20 v2.6.21: all files in two different historial versions
+git diff init/main.c: specific locally modified files in the working directory that don't match what was checked out from the repository
+git diff v2.6.21 init/main.c: specific file(s) in a specific historical version of the repository vs those same files in the working directory.
+git diff v2.6.20 v2.6.21 init/main.c: specific files in two different historical version of the repository
+  --find-copies-harder: tells git diff to detect renamed or copied files.
+
+# Branching:
+git branch testing: create branch
+git checkout testing: switch branch
+git checkout -b testing2: create and switch branch
+git branch --list: same as "git branch" without options, list local branches
+git branch -r: or --remotes: list remote-tracking branches
+git branch -a: or --all: list both local and remote branches
+git branch -a --contains <commit>: list all local/remote branches that contain the named commit
+  --no-contains: inverts it
+git branch -m <oldbranch> <newbranch>: or -M: rename oldbranch to newbranch; if newbranch exists, use -M to force it
+git branch -c <oldbranch> <newbranch>: or -C: same as -m, along with its config and reflog will be copied to a new name
+git branch -d <branchname>: or -D: delete branch
+  -r -d <branchname>: delete remote-tracking branches too
+
+# Merging:
+git checkout master
+git merge testing: merge branch testing with master
+
+git checkout commit/tag -b testing: check out from a particular commit or tag
+git mergetool --tool-help: use a graphical tool to resolve merging issues
+
+git branch: show all branches
+  -v: show the last commit of all branches too
+  -vv: including what each branch is tracking and if your local branch is ahead
+  --merged and --no-merged: filter this list to branches that you have or have not yet merged into the branch you’re currently on. 
+
+# Remote Branch:
+git ls-remote [remote]: get a full list of remote references explicitly
+git remote show [remote]: for remote branches as well as more information. Remote-tracking branches take the form <remote>/<branch> 
+git push <remote> <branch>
+git push --delete <remote_branch>: delete a remote branch 
+
+# Rebasing: 
+Git has two main ways to integrate changes from one branch into another: the merge and the rebase. 
+With the rebase command, you can take all the changes that were committed on one branch and replay them on another one. 
+Do not rebase commits that exist outside your repository. 
+In general the way to get the best of both worlds is to rebase local changes you’ve made but haven’t shared yet before you push them in order to clean up your story, but never rebase anything you’ve pushed somewhere. 
+
+git-grep - Print lines matching a pattern:
+git grep 'time_t' -- '*.[ch]': looks for time_t in all tracked .c and .h files in the working directory and its subdirectories.
+git grep -e '#define' --and \( -e MAX_PATH -e PATH_MAX \): looks for a line that has #define and either MAX_PATH or PATH_MAX.
+git grep --all-match -e NODE -e Unexpected: looks for a line that has NODE or Unexpected in files that have lines that match both.
+git grep solution -- :^Documentation: looks for solution, excluding files in Documentation.
+
+git-describe - Give an object a human readable name based on an available ref:
+Finds the most recent tag that is reachable from a commit.
+If the tag points to the commit, then only the tag is shown.
+Otherwise, it suffixes the tag name with the number of additional commits on top of the tagged object and the abbreviated object name of the most recent commit.
+By default (without --all or --tags), git describe only shows annotated tags.
+
+$ git describe parent
+v1.0.4-14-g2414721
+i.e. the current head of my "parent" branch is based on v1.0.4, but since it has a few commits on top of that, describe has added the number of additional commits ("14") and an abbreviated object name for the commit itself ("2414721") at the end.
+The number of additional commits is the number of commits which would be displayed by "git log v1.0.4..parent". The hash suffix is "-g" + 7-char abbreviation for the tip commit of parent (which was 2414721b194453f058079d897d13c4e377f92dc6). The "g" prefix stands for "git" and is used to allow describing the version of a software depending on the SCM the software is managed with. This is useful in an environment where people may use different SCMs.
+
+Doing a git describe on a tag-name will just show the tag name:
+$ git describe v1.0.4
+v1.0.4
+
+With --all, the command can use branch heads as references, so the output shows the reference path as well:
+$ git describe --all --abbrev=4 v1.0.5^2
+tags/v1.0.0-21-g975b
+
+$ git describe --all --abbrev=4 HEAD^
+heads/lt/describe-7-g975b
+With --abbrev set to 0, the command can be used to find the closest tagname without any suffix:
+
+$ git describe --abbrev=0 v1.0.5^2
+tags/v1.0.0
+
+git-blame - Show what revision and author last modified each line of a file
+Annotates each line in the given file with information from the revision which last modified the line.
+Optionally, start annotating from the given revision.
+When specified one or more times, -L restricts annotation to the requested lines.
+
+git-bisect - Use binary search to find the commit that introduced a bug
+This command uses a binary search algorithm to find which commit in your project’s history introduced a bug.
+You use it by first telling it a "bad" commit that is known to contain the bug, and a "good" commit that is known to be before the bug was introduced.
+Then git bisect picks a commit between those two endpoints and asks you whether the selected commit is "good" or "bad".
+It continues narrowing down the range until it finds the exact commit that introduced the change.
+
+git shortlog: summarize git log output
+Summarizes git log output in a format suitable for inclusion in release announcements. Each commit will be grouped by author and title.
+Additionally, "[PATCH]" will be stripped from the commit description.
+If no revisions are passed on the command line and either standard input is not a terminal or there is no current branch, git shortlog will output a summary of the log read from standard input, without reference to the current repository.
+
+
+Short SHA-1:
+can inspect commit that begins with begins with 1c002dd with any of the following variations of git show (assuming the shorter versions are unambiguous):
+$ git show 1c002dd4b536e7479fe34593e72e6c6c1819e53b
+$ git show 1c002dd4b536e7479f
+$ git show 1c002d
+To get short commit $ git log --abbrev-commit --pretty=oneline
+
+Branch References:
+To examine the last commit object on a branch, the following commands are equivalent, assuming that the topic1 branch points to commit ca82a6d...:
+$ git show ca82a6dff817ec66f44342007202690a93763949
+$ git show topic1
+
+If you want to see which specific SHA-1 a branch points to:
+$ git rev-parse topic1
+ca82a6dff817ec66f44342007202690a93763949
+
+RefLog Shortnames: reflog information is strictly local — it’s a log only of what you’ve done in your repository
+git show HEAD@{5}: see the fifth prior value of the HEAD of your repository
+git show master@{yesterday}: see where your master branch was yesterday
+git log -g master: see reflog information formatted like the git log output
+
+Ancestry References:
+<commit>^: mean the parent of that commit
+git show HEAD^: show the parent of HEAD
+
+<commit>^<number>:
+d921970^2 means “the second parent of d921970.”
+Useful only for merge commits, which have more than one parent.
+The first parent is the branch you were on when you merged, and the second is the commit on the branch that you merged in.
+
+<commit>~: refer to the first parent, so HEAD~ and HEAD^ are equivalent.
+The difference becomes apparent when you specify a number.
+HEAD~2 means “the first parent of the first parent,” or “the grandparent” — it traverses the first parents the number of times you specify.
+
+HEAD~3 can also be written HEAD~~~, which again is the first parent of the first parent of the first parent
+
+Combine these syntaxes: you can get the second parent of the previous reference (assuming it was a merge commit) by using HEAD~3^2
+
+
+# Workflows:
+git clone <remote_repo>
+git checkout <release_tag>
+git checkout -b <your_branch>
+git add .
+git commit -m "your message"
+git push --set-upstream origin <your_branch>
+git branch -d <your_branch>
+
+git fetch
+git checkout <release_tag>
+git pull
+git checkout <your_branch>
+git merge <release_tag>: merge latest of <release_tag> to <your_branch>
+git commit
+git push
+
+git checkout master 
+git tag -l
+git tag -a release/20201225 -m "Your message"
+git push --tags
+
+git tag -l --points-at HEAD      # tag on HEAD
+
+git diff --stat --cached origin/<release_tag>  # show a list of files to be pushed
+git diff --cached origin/<release_tag>         # show changes to be pushed
+git reset --hard HEAD^ : remove last commit
+git reset --hard HEAD~2 : remove last 2 commits
+git reset HEAD^ : revert last commit, but keep the changes in working tree
+git reset --hard: discard all local changes to all files permanently
+git checkout -- <file>: discard local changes to a file permanently
+git reset HEAD <file>: unstage the file to current commit (HEAD)
+git reset: unstage everything - retain changes
+git stash: discard all local changes, but save them for later
+git log --pretty=oneline --after="2020-10-24" --before="2020-10-28"
+git branch -a --contains mycommit | grep release
+
+git cherry-pick -n mycommit              # cherry-pick without commiting
+git show mycommit
+git diff mycommit~ mycommit
+git cherry-pick mynonmergecommit         # This commit is not a merge; cannot specify -m
+git cherry-pick -m 1 mymergecommit       # This commit is a merge;  -m parent-number; —mainline parent-number
+
+# GitHub:
+Create a new repository on the command line:
+echo "# My repository readme" >> README.md
+git init
+git add README.md
+git commit -m "first commit"
+git branch -M main
+git remote add origin https://github.com/myusername/myrepository.git
+git push -u origin main
+                
+Push an existing repository from the command line:
+git remote add origin https://github.com/myusername/myrepository.git
+git branch -M main
+git push -u origin main
