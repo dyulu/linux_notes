@@ -1,0 +1,483 @@
+==== Install k8s on Ubuntu 18.04: lsb_release -a | grep -i release
+Install Docker:
+  sudo apt-get update
+  sudo apt-get install docker.io
+Enable and start Docker
+  sudo systemctl enable docker
+  sudo systemctl start docker
+Install Kubernetes
+  curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add
+  sudo apt-add-repository "deb http://apt.kubernetes.io/ kubernetes-xenial main"
+  sudo apt-get install kubeadm kubelet kubectl
+Deploy Kubernetes
+  sudo swapoff –a    # sudo /sbin/swapoff -a
+  sudo kubeadm init --pod-network-cidr=10.244.0.0/16
+  mkdir -p $HOME/.kube
+  sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+  sudo chown $(id -u):$(id -g) $HOME/.kube/config
+  sudo kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+Join worker nodes to cluster
+  kubeadm join --discovery-token xxxx --discovery-token-ca-cert-hash yyyy
+Allow scheduling pods on master
+  kubectl taint nodes --all node-role.kubernetes.io/master-
+Create a new token and join command to rejoin/add worker node
+  systemctl status kubelet
+  kubeadm token generate    # record generated token as <tokenname>
+  kubeadm token create <tokenname> --print-join-command
+
+==== Imperative commands:
+Create objects:
+kubectl run:       create new pods to run containers
+kubectl expose:    create new service to load balance traffic across pods
+kubectl autoscale: create autoscaler to horizontally auto-scale a controller, such as Deployment
+
+Update objects:
+kubectl scale:       horizontally scale a controller to add or remove pods by updating the replica count of the controller
+kubectl annotate:    add or remove an annotation from an object
+kubectl label:       add or remove a label from an object
+kubectl set <field>: set an aspect of an object
+kubectl edit:        directly edit the raw configuration of a live object by opening its configuration in an editor
+kubectl patch:       directly modify specific fields of a live object by using a patch string
+
+Delete objects:
+kubectl delete <type>/<name>
+kubectl delete <type> -l <label>
+
+View objects:
+kubectl get:      prints basic information about matching objects. Use get -h to see a list of options
+kubectl describe: prints aggregated detailed information about matching objects
+kubectl logs:     prints the stdout and stderr for a container running in a pod
+
+==== Imperative object configuration:
+Create: kubectl create -f <config.yaml | url>
+Update: kubectl replace -f <config.yaml | url>
+Delete: kubectl delete -f <config.yaml | url>
+View:   kubectl get -f <config.yaml | url> -o yaml
+
+==== Declarative object configuration:
+kubectl apply -f <config.yaml>
+kubectl apply -f <configdir>/
+
+==== Migrating from imperative commands to imperative object configuration
+Export the live object to a local object configuration file:
+  kubectl get <kind>/<name> -o yaml > <kind>_<name>.yaml
+Manually remove the status field from the object configuration file.
+For subsequent object management, use replace exclusively.
+  kubectl replace -f <kind>_<name>.yaml
+
+======== https://kubernetes.io/docs/reference/kubectl/cheatsheet/ ========
+==== Kubectl context and configuration
+kubectl config view
+KUBECONFIG=~/.kube/config:~/.kube/config 
+kubectl config get-contexts 
+kubectl config current-context
+kubectl config use-context <myclustername>
+kubectl config set-credentials kubeuser/foo.kubernetes.com --username=kubeuser --password=kubepassword
+
+==== Create objects
+kubectl apply -f ./my-manifest.yaml            # create resource(s)
+kubectl apply -f ./my1.yaml -f ./my2.yaml      # create from multiple files
+kubectl apply -f ./dir                         # create resource(s) in all manifest files in dir
+kubectl apply -f https://git.io/vPieo          # create resource(s) from url
+kubectl create deployment nginx --image=nginx  # start a single instance of nginx
+
+# create a Job which prints "Hello World"
+kubectl create job hello --image=busybox -- echo "Hello World" 
+
+# create a CronJob that prints "Hello World" every minute
+kubectl create cronjob hello --image=busybox   --schedule="*/1 * * * *" -- echo "Hello World" 
+
+==== View/Find resources
+# Get commands with basic output
+kubectl get services                          # List all services in the namespace
+kubectl get pods --all-namespaces             # List all pods in all namespaces
+kubectl get pods -o wide                      # List all pods in the current namespace, with more details
+kubectl get deployment my-dep                 # List a particular deployment
+kubectl get pods                              # List all pods in the namespace
+kubectl get pod my-pod -o yaml                # Get a pod's YAML
+
+# Describe commands with verbose output
+kubectl describe nodes my-node
+kubectl describe pods my-pod
+
+# List Services Sorted by Name
+kubectl get services --sort-by=.metadata.name
+
+# List pods Sorted by Restart Count
+kubectl get pods --sort-by='.status.containerStatuses[0].restartCount'
+
+# List PersistentVolumes sorted by capacity
+kubectl get pv --sort-by=.spec.capacity.storage
+
+# Get the version label of all pods with label app=cassandra
+kubectl get pods --selector=app=cassandra -o \
+  jsonpath='{.items[*].metadata.labels.version}'
+
+# Retrieve the value of a key with dots, e.g. 'ca.crt'
+kubectl get configmap myconfig \
+  -o jsonpath='{.data.ca\.crt}'
+
+# Get all worker nodes (use a selector to exclude results that have a label
+# named 'node-role.kubernetes.io/master')
+kubectl get node --selector='!node-role.kubernetes.io/master'
+
+# Get all running pods in the namespace
+kubectl get pods --field-selector=status.phase=Running
+
+# Get ExternalIPs of all nodes
+kubectl get nodes -o jsonpath='{.items[*].status.addresses[?(@.type=="ExternalIP")].address}'
+
+# List Names of Pods that belong to Particular RC
+# "jq" command useful for transformations that are too complex for jsonpath, it can be found at https://stedolan.github.io/jq/
+sel=${$(kubectl get rc my-rc --output=json | jq -j '.spec.selector | to_entries | .[] | "\(.key)=\(.value),"')%?}
+echo $(kubectl get pods --selector=$sel --output=jsonpath={.items..metadata.name})
+
+# Show labels for all pods (or any other Kubernetes object that supports labelling)
+kubectl get pods --show-labels
+
+# Check which nodes are ready
+JSONPATH='{range .items[*]}{@.metadata.name}:{range @.status.conditions[*]}{@.type}={@.status};{end}{end}' \
+ && kubectl get nodes -o jsonpath="$JSONPATH" | grep "Ready=True"
+
+# List all Secrets currently in use by a pod
+kubectl get pods -o json | jq '.items[].spec.containers[].env[]?.valueFrom.secretKeyRef.name' | grep -v null | sort | uniq
+
+# List all containerIDs of initContainer of all pods
+# Helpful when cleaning up stopped containers, while avoiding removal of initContainers.
+kubectl get pods --all-namespaces -o jsonpath='{range .items[*].status.initContainerStatuses[*]}{.containerID}{"\n"}{end}' | cut -d/ -f3
+
+# List Events sorted by timestamp
+kubectl get events --sort-by=.metadata.creationTimestamp
+
+# Compares the current state of the cluster against the state that the cluster would be in if the manifest was applied.
+kubectl diff -f ./my-manifest.yaml
+
+# Produce a period-delimited tree of all keys returned for nodes
+# Helpful when locating a key within a complex nested JSON structure
+kubectl get nodes -o json | jq -c 'path(..)|[.[]|tostring]|join(".")'
+
+# Produce a period-delimited tree of all keys returned for pods, etc
+kubectl get pods -o json | jq -c 'path(..)|[.[]|tostring]|join(".")'
+
+==== Update resources
+kubectl set image deployment/frontend www=image:v2               # Rolling update "www" containers of "frontend" deployment, updating the image
+kubectl rollout history deployment/frontend                      # Check the history of deployments including the revision 
+kubectl rollout undo deployment/frontend                         # Rollback to the previous deployment
+kubectl rollout undo deployment/frontend --to-revision=2         # Rollback to a specific revision
+kubectl rollout status -w deployment/frontend                    # Watch rolling update status of "frontend" deployment until completion
+kubectl rollout restart deployment/frontend                      # Rolling restart of the "frontend" deployment
+
+
+cat pod.json | kubectl replace -f -                              # Replace a pod based on the JSON passed into std
+
+# Force replace, delete and then re-create the resource. Will cause a service outage.
+kubectl replace --force -f ./pod.json
+
+# Create a service for a replicated nginx, which serves on port 80 and connects to the containers on port 8000
+kubectl expose rc nginx --port=80 --target-port=8000
+
+# Update a single-container pod's image version (tag) to v4
+kubectl get pod mypod -o yaml | sed 's/\(image: myimage\):.*$/\1:v4/' | kubectl replace -f -
+
+kubectl label pods my-pod new-label=awesome                      # Add a Label
+kubectl annotate pods my-pod icon-url=http://goo.gl/XXBTWq       # Add an annotation
+kubectl autoscale deployment foo --min=2 --max=10                # Auto scale a deployment "foo"
+
+==== Scale resource
+kubectl scale --replicas=3 rs/foo                                 # Scale a replicaset named 'foo' to 3
+kubectl scale --replicas=3 -f foo.yaml                            # Scale a resource specified in "foo.yaml" to 3
+kubectl scale --current-replicas=2 --replicas=3 deployment/mysql  # If the deployment named mysql's current size is 2, scale mysql to 3
+kubectl scale --replicas=5 rc/foo rc/bar rc/baz                   # Scale multiple replication controllers
+
+==== Delete resource
+kubectl delete -f ./pod.json                                              # Delete a pod using the type and name specified in pod.json
+kubectl delete pod,service baz foo                                        # Delete pods and services with same names "baz" and "foo"
+kubectl delete pods,services -l name=myLabel                              # Delete pods and services with label name=myLabel
+kubectl -n my-ns delete pod,svc --all                                     # Delete all pods and services in namespace my-ns,
+# Delete all pods matching the awk pattern1 or pattern2
+kubectl get pods  -n mynamespace --no-headers=true | awk '/pattern1|pattern2/{print $1}' | xargs  kubectl delete -n mynamespace pod
+
+==== Interact with running pods
+kubectl logs my-pod                                 # dump pod logs (stdout)
+kubectl logs -l name=myLabel                        # dump pod logs, with label name=myLabel (stdout)
+kubectl logs my-pod --previous                      # dump pod logs (stdout) for a previous instantiation of a container
+kubectl logs my-pod -c my-container                 # dump pod container logs (stdout, multi-container case)
+kubectl logs -l name=myLabel -c my-container        # dump pod logs, with label name=myLabel (stdout)
+kubectl logs my-pod -c my-container --previous      # dump pod container logs (stdout, multi-container case) for a previous instantiation of a container
+kubectl logs -f my-pod                              # stream pod logs (stdout)
+kubectl logs -f my-pod -c my-container              # stream pod container logs (stdout, multi-container case)
+kubectl logs -f -l name=myLabel --all-containers    # stream all pods logs with label name=myLabel (stdout)
+kubectl run -i --tty busybox --image=busybox -- sh  # Run pod as interactive shell
+kubectl run nginx --image=nginx -n mynamespace      # Run pod nginx in a specific namespace
+kubectl run nginx --image=nginx                     # Run pod nginx and write its spec into a file called pod.yaml
+--dry-run=client -o yaml > pod.yaml
+
+kubectl attach my-pod -i                            # Attach to Running Container
+kubectl port-forward my-pod 5000:6000               # Listen on port 5000 on the local machine and forward to port 6000 on my-pod
+kubectl exec my-pod -- ls /                         # Run command in existing pod (1 container case)
+kubectl exec --stdin --tty my-pod -- /bin/sh        # Interactive shell access to a running pod (1 container case) 
+kubectl exec my-pod -c my-container -- ls /         # Run command in existing pod (multi-container case)
+kubectl top pod POD_NAME --containers               # Show metrics for a given pod and its containers
+
+==== Interact with nodes and cluster
+kubectl cordon my-node                                                # Mark my-node as unschedulable
+kubectl drain my-node                                                 # Drain my-node in preparation for maintenance
+kubectl uncordon my-node                                              # Mark my-node as schedulable
+kubectl top node my-node                                              # Show metrics for a given node
+kubectl cluster-info                                                  # Display addresses of the master and services
+kubectl cluster-info dump                                             # Dump current cluster state to stdout
+kubectl cluster-info dump --output-directory=/path/to/cluster-state   # Dump current cluster state to /path/to/cluster-state
+
+# If a taint with that key and effect already exists, its value is replaced as specified.
+kubectl taint nodes foo dedicated=special-user:NoSchedule
+
+==== K8S resources
+kubectl api-resources --namespaced=true      # All namespaced resources
+kubectl api-resources --namespaced=false     # All non-namespaced resources
+kubectl api-resources -o name                # All resources with simple output (just the resource name)
+kubectl api-resources -o wide                # All resources with expanded (aka "wide") output
+kubectl api-resources --verbs=list,get       # All resources that support the "list" and "get" request verbs
+kubectl api-resources --api-group=extensions # All resources in the "extensions" API group
+
+$ kubectl api-resources
+NAME                              SHORTNAMES   APIGROUP                       NAMESPACED   KIND
+bindings                                                                      true         Binding
+componentstatuses                 cs                                          false        ComponentStatus
+configmaps                        cm                                          true         ConfigMap
+endpoints                         ep                                          true         Endpoints
+events                            ev                                          true         Event
+limitranges                       limits                                      true         LimitRange
+namespaces                        ns                                          false        Namespace
+nodes                             no                                          false        Node
+persistentvolumeclaims            pvc                                         true         PersistentVolumeClaim
+persistentvolumes                 pv                                          false        PersistentVolume
+pods                              po                                          true         Pod
+podtemplates                                                                  true         PodTemplate
+replicationcontrollers            rc                                          true         ReplicationController
+resourcequotas                    quota                                       true         ResourceQuota
+secrets                                                                       true         Secret
+serviceaccounts                   sa                                          true         ServiceAccount
+services                          svc                                         true         Service
+mutatingwebhookconfigurations                  admissionregistration.k8s.io   false        MutatingWebhookConfiguration
+validatingwebhookconfigurations                admissionregistration.k8s.io   false        ValidatingWebhookConfiguration
+customresourcedefinitions         crd,crds     apiextensions.k8s.io           false        CustomResourceDefinition
+apiservices                                    apiregistration.k8s.io         false        APIService
+controllerrevisions                            apps                           true         ControllerRevision
+daemonsets                        ds           apps                           true         DaemonSet
+deployments                       deploy       apps                           true         Deployment
+replicasets                       rs           apps                           true         ReplicaSet
+statefulsets                      sts          apps                           true         StatefulSet
+tokenreviews                                   authentication.k8s.io          false        TokenReview
+localsubjectaccessreviews                      authorization.k8s.io           true         LocalSubjectAccessReview
+selfsubjectaccessreviews                       authorization.k8s.io           false        SelfSubjectAccessReview
+selfsubjectrulesreviews                        authorization.k8s.io           false        SelfSubjectRulesReview
+subjectaccessreviews                           authorization.k8s.io           false        SubjectAccessReview
+horizontalpodautoscalers          hpa          autoscaling                    true         HorizontalPodAutoscaler
+cronjobs                          cj           batch                          true         CronJob
+jobs                                           batch                          true         Job
+certificatesigningrequests        csr          certificates.k8s.io            false        CertificateSigningRequest
+leases                                         coordination.k8s.io            true         Lease
+endpointslices                                 discovery.k8s.io               true         EndpointSlice
+events                            ev           events.k8s.io                  true         Event
+ingresses                         ing          extensions                     true         Ingress
+ingressclasses                                 networking.k8s.io              false        IngressClass
+ingresses                         ing          networking.k8s.io              true         Ingress
+networkpolicies                   netpol       networking.k8s.io              true         NetworkPolicy
+runtimeclasses                                 node.k8s.io                    false        RuntimeClass
+poddisruptionbudgets              pdb          policy                         true         PodDisruptionBudget
+podsecuritypolicies               psp          policy                         false        PodSecurityPolicy
+clusterrolebindings                            rbac.authorization.k8s.io      false        ClusterRoleBinding
+clusterroles                                   rbac.authorization.k8s.io      false        ClusterRole
+rolebindings                                   rbac.authorization.k8s.io      true         RoleBinding
+roles                                          rbac.authorization.k8s.io      true         Role
+priorityclasses                   pc           scheduling.k8s.io              false        PriorityClass
+csidrivers                                     storage.k8s.io                 false        CSIDriver
+csinodes                                       storage.k8s.io                 false        CSINode
+storageclasses                    sc           storage.k8s.io                 false        StorageClass
+volumeattachments                              storage.k8s.io                 false        VolumeAttachment
+
+==== Format output
+-o=custom-columns=<spec>	Print a table using a comma separated list of custom columns
+-o=custom-columns-file=<filename>	Print a table using the custom columns template in the <filename> file
+-o=json	Output a JSON formatted API object
+-o=jsonpath=<template>	Print the fields defined in a jsonpath expression
+-o=jsonpath-file=<filename>	Print the fields defined by the jsonpath expression in the <filename> file
+-o=name	Print only the resource name and nothing else
+-o=wide	Output in the plain-text format with any additional information, and for pods, the node name is included
+-o=yaml	Output a YAML formatted API object
+
+# All images running in a cluster
+kubectl get pods -A -o=custom-columns='DATA:spec.containers[*].image'
+
+ # All images excluding "k8s.gcr.io/coredns:1.6.2"
+kubectl get pods -A -o=custom-columns='DATA:spec.containers[?(@.image!="k8s.gcr.io/coredns:1.6.2")].image'
+
+# All fields under metadata regardless of name
+kubectl get pods -A -o=custom-columns='DATA:metadata.*'
+
+==== Debug
+Verbosity	Description
+--v=0	Generally useful for this to always be visible to a cluster operator.
+--v=1	A reasonable default log level if you don't want verbosity.
+--v=2	Useful steady state information about the service and important log messages that may correlate to significant changes in the system. This is the recommended default log level for most systems.
+--v=3	Extended information about changes.
+--v=4	Debug level verbosity.
+--v=6	Display requested resources.
+--v=7	Display HTTP request headers.
+--v=8	Display HTTP request contents.
+--v=9	Display HTTP request contents without truncation of contents.
+
+====
+kubectl get pod <podname> --watch
+kubectl exec -it <podname> -- /bin/bash      # interactive shell to <pod-name>
+                                             # inside container, 'kill 1' will kill the it
+                                             # grep docker /proc/1/cgroup; ps -p 1
+kubectl delete pods --all
+kubectl get pods --show-all                  # show completed objects as well
+
+Multiple containers in a pod: limit resources each container use so they co-exist better
+
+kubectl explain pods
+
+kubectl label nodes <nodename> disktype=ssd
+kubectl get nodes --show-labels
+kubectl taint nodes <nodename> env=ev:NoSchedule  # Do not schedule on this node without specified toleration
+
+kubectl scale deployments <deploymentname --replicas=<num>
+
+kubectl delete rs/<replicasetname>
+
+==== Volumes
+Define volume in pod spec
+Have each container 'mount' the volume
+Types:
+emptyDir: not persistent, for containers in a pod to share data
+hostPath: mount file/dir on node FS into pod; makes pod-node coupling tight; uncommon
+gitRepo: clone git repo to the volume
+configMap: mount data from ConfigMap object, which defines key-value pairs; inject parameters into pod
+secret: pass sensitive info to pod; kubectl create secret
+
+kubectl create -f <pod_volume.yaml> --validate=false
+
+==== Secrets
+$ echo -n 'my_username' | base64
+bXlfdXNlcm5hbWU=
+$ echo -n 'my_password' | base64
+bXlfcGFzc3dvcmQ=
+$ cat my_secrets.yaml
+apiVersion: v1
+kind: Secret
+metedata:
+  name: my_secret
+data:
+  username: bXlfdXNlcm5hbWU=
+  password: bXlfcGFzc3dvcmQ=
+$ kubectl create -f my_secrets.yaml
+$ kubectl get secret my_secret
+$ cat my_secret_pod.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my_secret_pod
+spec:
+  containers:
+    - name: my_secret_container
+      image: nginx
+      volumeMounts:
+        - name: my_secret_vol
+          mountPath: /etc/my_secret_vol
+  volumes:
+    - name: my_secret_vol
+      secret:
+        secretName: my_secret
+$ kubectl create -f my_secret_pod.yaml
+# In /etc/my_secret_vol directory of my_secret_pod, two files exist: username and password
+
+kubectl create secret generic <secretname> --from-file=./<my_secrets.txt>
+kubectl describe secrets <secretname>
+
+==== Config Maps
+$ cat my_configmap.yaml
+apiVerwsion: v1
+kind: ConfigMap
+metadata:
+  name: my_configmap
+  namespace: default
+data:
+  my_key: my_value
+$ cat my_configmap_pod.yaml
+apiVersion: v1
+kind:Pod
+metadate:
+  name: my_configmap_pod
+spec:
+  containers:
+    - name: my_configmap_container
+      image: busybox
+      command: [ "/bin/sh", "-c", "env" ]
+      env:
+        - name: MY_KEY
+          valueFrom:
+            configMapKeyRef:
+              name: my_configmap
+              key: my_key
+restartPolicy: Never
+
+==== Pod and controllers
+Pod:
+  Containers inside pod template
+
+ReplicaSet:
+  Pod template
+  Pod selector
+  Labels
+  Number of replicas
+  Self-healling and scaling
+
+Deployment:
+  Contains ReplicaSet spec within it
+  Versioning
+  Fast rollback
+
+DaemonSet: pod lifetime tied to that of some node in the cluster; not scalable
+  Ensure all or subset of nodes run a copy of a pod
+  As nodes are added, pods are added
+  As nodes are removed, pods are garbage collected
+
+StatefulSet: individual pods are unique (not fungible)
+  Maintains a sticky identity
+  Creates pods from the same spec
+  Maintains identifier across any rescheduling
+
+Run-to-Completion Jobs: pods that do their jobs and then go away
+  Non-parallel jobs: force one pod to run successfully
+  Parallel jobs with fixed completion count: job completes when number of completions reaches target
+  Parallel jobs with work queue: requires coordination
+
+CronJobs
+
+ReplicationController: offer same function as ReplicateSets + Deployments; obsolete
+
+==== HorizontalPodAutoscaler
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: myautoscaler
+spec:
+  scaleTargetRef:
+    kind: ReplicaSet
+    name: mypods
+  minReplicas: 3
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 50
+
+==== Services for stable IP addresses
+  Service = logical set of backend pods + stable frontend
+  Frontend = static IP + port + DNS name
+  Backend: logical set of backend pods (label selector)
+  Types:
+    ClusterIP: only accessible within cluster; default type
+    NodePort: external clients can hit NodeIP + NodePort
+    LoadBalancer: external LoadBalancer; auto-create NodePort and ClusterIP services under the hood
+                  External LB => NodePort => ClusterIP => Backend Pod
+    ExternalName: map service to external service residing outside the cluster; service without selector 
