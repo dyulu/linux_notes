@@ -1,0 +1,282 @@
+# https://pmem.io
+# https://pmem.io/2018/05/15/using_persistent_memory_devices_with_the_linux_device_mapper.html
+
+# NDCTL: Non-Volatile Device Control, utility for managing the LIBNVDIMM Linux Kernel subsystem
+
+# Minimum system requirements are required to support either physical NVDIMMs or emulated NVDIMMs:
+Linux Kernel Version 4.0 or later
+    Kernel Version 4.19 or later is recommended for production 
+4GB of DDR Memory (Minimum), 16GB or more recommended for Emulated NVDIMMs
+
+# fdisk -l /dev/pmem0 
+# lsblk /dev/pmem0
+# mkfs.ext4 /dev/pmem0
+# mkdir /pmem
+# mount -o dax /dev/pmem0 /pmem
+# sudo mount -v | grep /pmem
+
+# fdisk /dev/pmem0
+
+# cat /proc/iomem
+
+$ ndctl --help
+ usage: ndctl [--version] [--help] COMMAND [ARGS]
+
+ See 'ndctl help COMMAND' for more information on a specific command.
+ ndctl --list-cmds to see all available commands
+
+$ ndctl --list-cmds
+version
+enable-namespace
+disable-namespace
+create-namespace
+destroy-namespace
+check-namespace
+clear-errors
+enable-region
+disable-region
+enable-dimm
+disable-dimm
+zero-labels
+read-labels
+write-labels
+init-labels
+check-labels
+inject-error
+update-firmware
+inject-smart
+wait-scrub
+start-scrub
+setup-passphrase
+update-passphrase
+remove-passphrase
+freeze-security
+sanitize-dimm
+load-keys
+wait-overwrite
+list
+monitor
+help
+
+$ ndctl help enable-namespace
+
+A namespace can be provisioned to operate in one of 4 modes, fsdax, devdax, sector, and raw.
+  fsdax: default mode; creates a block device (/dev/pmemX[.Y]) that supports the direct access ,i.e., DAX, capabilities of
+         Linux filesystems, i.e., xfs and ext4. DAX removes the page cache from the I/O path and allows mmap to establish
+         direct mappings to persistent memory media.
+  devdax: instead of a block-device that can support a DAX-enabled filesystem, this mode emits a single character device
+          file (/dev/daxX.Y). Use this mode to assign persistent memory to a virtual-machine, register persistent memory
+          for RDMA, or when gigantic mappings are needed.
+  sector: use this mode to host legacy filesystems that do not checksum metadata or applications that are not prepared for
+          torn sectors after a crash.
+  raw: effectively just a memory disk that does not support DAX. Typically this indicates a namespace that was created by
+       tooling or another operating system that did not know how to create a Linux fsdax or devdax mode namespace.
+
+$ ndctl create-namespace -h
+
+ usage: ndctl create-namespace [<options>]
+
+    -b, --bus <bus-id>    limit namespace to a bus with an id or provider of <bus-id>
+    -r, --region <region-id>
+                          limit namespace to a region with an id or name of <region-id>
+    -v, --verbose         emit extra debug messages to stderr
+    -e, --reconfig <reconfig namespace>
+                          reconfigure existing namespace
+    -u, --uuid <uuid>     specify the uuid for the namespace (default: autogenerate)
+    -n, --name <name>     specify an optional free form name for the namespace
+    -s, --size <size>     specify the namespace size in bytes (default: available capacity)
+    -m, --mode <operation-mode>
+                          specify a mode for the namespace, 'sector', 'fsdax', 'devdax' or 'raw'
+    -M, --map <memmap-location>
+                          specify 'mem' or 'dev' for the location of the memmap
+    -l, --sector-size <lba-size>
+                          specify the logical sector size in bytes
+    -t, --type <type>     specify the type of namespace to create 'pmem' or 'blk'
+    -a, --align <align>   specify the namespace alignment in bytes (default: 2M)
+    -f, --force           reconfigure namespace even if currently active
+    -L, --autolabel       automatically initialize labels
+
+$ ndctl enable-namespace -h
+ usage: ndctl enable-namespace <namespace> [<options>]
+
+    -b, --bus <bus-id>    limit namespace to a bus with an id or provider of <bus-id>
+    -r, --region <region-id>
+                          limit namespace to a region with an id or name of <region-id>
+    -v, --verbose         emit extra debug messages to stderr
+
+$ ndctl list -h
+ usage: ndctl list [<options>]
+
+    -b, --bus <bus-id>    filter by bus
+    -r, --region <region-id>
+                          filter by region
+    -d, --dimm <dimm-id>  filter by dimm
+    -n, --namespace <namespace-id>
+                          filter by namespace id
+    -m, --mode <namespace-mode>
+                          filter by namespace mode
+    -t, --type <region-type>
+                          filter by region-type
+    -U, --numa-node <numa node>
+                          filter by numa node
+    -B, --buses           include bus info
+    -D, --dimms           include dimm info
+    -F, --firmware        include firmware info
+    -H, --health          include dimm health
+    -R, --regions         include region info
+    -N, --namespaces      include namespace info (default)
+    -X, --device-dax      include device-dax info
+    -C, --capabilities    include region capability info
+    -i, --idle            include idle devices
+    -M, --media-errors    include media errors
+    -u, --human           use human friendly number formats 
+    -v, --verbose         increase output detail
+
+==== RHEL
+
+Persistent memory can be configured in one of the following ways for use by applications:
+  Block mode
+  Device DAX mode
+  FS-DAX mode
+The current status of persistent memory support and FS-DAX for ext4 and XFS is as follows:
+  Block Mode is fully supported in RHEL 7.3 and later.
+  Device DAX is fully supported in RHEL 7.4 and later.
+  FS-DAX for ext4 and XFS is in Technology Preview from RHEL 7.3 to RHEL 7.8 and RHEL 8.0 to RHEL 8.1
+
+==== Red Hat Enterprise Linux Server 7.7 (Maipo)
+
+$ uname -r
+3.10.0-1062.el7.x86_64
+$ ndctl version
+65
+
+# See whether package ndctl is installed
+$ rpm -qa | grep ndctl
+$ yum install ndctl
+$ rpm -qa | grep ndctl
+ndctl-65-5.el7.x86_64
+ndctl-libs-65-5.el7.x86_64
+
+$ ndctl list -N
+[
+  {
+    "dev":"namespace0.0",
+    "mode":"raw",
+    "size":34359738368,
+    "sector_size":512,
+    "blockdev":"pmem0"
+  }
+]
+
+$ ndctl create-namespace -f -e namespace0.0 --mode=memory --map=mem
+{
+  "dev":"namespace0.0",
+  "mode":"fsdax",
+  "map":"mem",
+  "size":"32.00 GiB (34.36 GB)",
+  "uuid":"40f75bfb-a5f2-4aa8-bd32-a352b1996272",
+  "sector_size":512,
+  "align":2097152,
+  "blockdev":"pmem0"
+}
+
+$ ndctl list -N
+[
+  {
+    "dev":"namespace0.0",
+    "mode":"fsdax",
+    "map":"mem",
+    "size":34357641216,
+    "uuid":"40f75bfb-a5f2-4aa8-bd32-a352b1996272",
+    "sector_size":512,
+    "align":2097152,
+    "blockdev":"pmem0"
+  }
+]
+
+$ ls -l /dev/disk/by-uuid | grep pmem
+$ cat /etc/udev/rules.d/90-mypmem.rules 
+ACTION=="add", KERNEL=="pmem0", SUBSYSTEM=="block", SYMLINK+="/dev/disk/by-uuid/ATTRS{uuid}"
+$ udevadm trigger
+$ ls -l /dev/disk/by-uuid | grep pmem
+lrwxrwxrwx. 1 root root 11 Dec 22 16:54 1f2c4045-3c47-4b76-a828-66ecb61c129e -> ../../pmem0
+
+$ ndctl create-namespace -f -e namespace0.0 --mode=raw 
+{
+  "dev":"namespace0.0",
+  "mode":"raw",
+  "size":"32.00 GiB (34.36 GB)",
+  "sector_size":512,
+  "blockdev":"pmem0"
+}
+
+==== Red Hat Enterprise Linux Server 7.6 Beta (Maipo)
+
+$ uname -r
+3.10.0-931.el7.x86_64
+$ ndctl version
+65
+
+$ ndctl list -N                      # --namespaces
+[
+  {
+    "dev":"namespace0.0",
+    "mode":"raw",
+    "size":34359738368,
+    "sector_size":512,
+    "blockdev":"pmem0"
+  }
+]
+$ ndctl list --regions                # -R
+[
+  {
+    "dev":"region0",
+    "size":34359738368,
+    "available_size":0,
+    "max_available_extent":0,
+    "type":"pmem",
+    "persistence_domain":"unknown"
+  }
+]
+$ ndctl list --namespace --idle
+$ ndctl list --namespace 0.0
+[
+  {
+    "dev":"namespace0.0",
+    "mode":"raw",
+    "size":34359738368,
+    "sector_size":512,
+    "blockdev":"pmem0"
+  }
+]
+$ ndctl create-namespace --force --reconfig=namespace0.0 --mode=fsdax --map=mem --verbose
+enable_labels:1025: region0: failed to initialize labels
+namespace_reconfig:1057: region0: no idle namespace seed
+failed to reconfigure namespace: No such device
+$  ndctl create-namespace --region=region0 --mode=fsdax --map=mem --verbose
+namespace_create:799: region0: insufficient capacity size: 0 avail: 0
+failed to create namespace: Resource temporarily unavailable
+
+$ ndctl create-namespace --no-autolabel -f -e namespace0.0 --mode=memory --map=mem -vvv
+{
+  "dev":"namespace0.0",
+  "mode":"fsdax",
+  "map":"mem",
+  "size":"32.00 GiB (34.36 GB)",
+  "uuid":"eef6331c-7b5c-43ba-a266-5e93aa63bb49",
+  "sector_size":512,
+  "align":2097152,
+  "blockdev":"pmem0"
+}
+$ ls -l /dev/disk/by-uuid | grep pmem
+lrwxrwxrwx. 1 root root 11 Dec 22 14:36 1f2c4045-3c47-4b76-a828-66ecb61c129e -> ../../pmem0
+$  ndctl create-namespace --no-autolabel -f -e namespace0.0 --mode=raw -vvv
+{
+  "dev":"namespace0.0",
+  "mode":"raw",
+  "size":"32.00 GiB (34.36 GB)",
+  "sector_size":512,
+  "blockdev":"pmem0"
+}
+$ ls -l /dev/disk/by-uuid | grep pmem
+$
