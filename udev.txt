@@ -1,0 +1,297 @@
+# Manage device events with udev, i.e., userspace /dev
+# Create persistent device names, take the device naming out of kernel space and implement rule based device naming
+# Dynamically creates or removes device node files at boot time in the /dev directory for all types of devices
+# Trigger a specific action when a specific device is plugged in
+# Kernel sends data through the netlink socket when a device is added to, or removed from a system
+# Udev daemon listens to the netlink socket that the kernel uses for communicating with user space applications
+
+# /lib/udev/rules.d/, /usr/lib/udev/rules.d: default rules directory
+# /etc/udev/rules.d/: custom rules directory. These rules take precedence.
+
+# Rules are processed in lexical order
+# Syntax of the rules files:
+#   Comments begin with a # sign
+#   Rule consists of a list of one or more key-value pairs separated by a comma
+#   Two types of keys: match keys, assignment keys
+#   If all match keys match their respective value, the rule gets applied
+#     and the assignment keys are assigned the specified value
+#       == : Compare for equality
+#       != : Compare for inequality
+#        = : Assign a value to a key
+#       += : Add the value to the current values for the key
+#       := : Assign the final value to the key. Disallow any later changes by any later rules
+#   Support shell-style pattern matching (*, ?, [])
+# Match Keys:
+#   ACTION: the name of the event action.
+#   DEVPATH: the devpath of the event device.
+#   KERNEL: the name of the event device.
+#   NAME: the name of a network interface. Can be used if the NAME key was set in one of the preceding rules.
+#   SYMLINK: the name of the symlink targeting the node. Can be used if a SYMLINK key was set in one of the preceding rules.
+#            There can be multiple symlinks but only one needs to match.
+#   SUBSYSTEM: the subsystem of the event device.
+#   TEST{octal mode mask}: Test the existence of a file. Can specify octal mode mask.
+#   DRIVER, ATTR{filename}, KERNELS, SUBSYSTEMS, DRIVERS, ATTRS{filename}, TAGS, ENV{key}, TAG, PROGRAM, and RESULT
+# Assignment Keys:
+#   NAME: name to use for a network interface. The name of a device cannot be changed, only additional symlinks can be created.
+#   SYMLINK: name of the symlink targeting the node.
+#   OWNER, GROUP, MODE: permissions for the device node.
+#   OPTIONS: rule and device options, e.g., ignore_remove: do not remove the device node when the device goes away.
+#   ATTR{key}, ENV{key}, TAG, RUN{type}, LABEL, GOTO, IMPORT{type}, WAIT_FOR, and OPTIONS.
+# NAME, SYMLINK, PROGRAM, OWNER, GROUP, MODE, and RUN keys support many printf- like string substitutions. e.g
+#   %M: kernel major number for the device
+#   %m: kernel minor number for the device
+
+# rpm -ql systemd | grep udev
+# apt list --installed | grep udev
+
+# udevadm --help
+udevadm [--help] [--version] [--debug] COMMAND [COMMAND OPTIONS]
+
+Send control commands or test the device manager.
+
+Commands:
+  info          Query sysfs or the udev database
+  trigger       Request events from the kernel
+  settle        Wait for pending udev events
+  control       Control the udev daemon
+  monitor       Listen to kernel and udev events
+  test          Test an event run
+  test-builtin  Test a built-in command
+
+# udevadm info --help
+udevadm info [OPTIONS] [DEVPATH|FILE]
+
+Query sysfs or the udev database.
+
+  -h --help                   Print this message
+     --version                Print version of the program
+  -q --query=TYPE             Query device information:
+       name                     Name of device node
+       symlink                  Pointing to node
+       path                     sysfs device path
+       property                 The device properties
+       all                      All values
+  -p --path=SYSPATH           sysfs device path used for query or attribute walk
+  -n --name=NAME              Node or symlink name used for query or attribute walk
+  -r --root                   Prepend dev directory to path names
+  -a --attribute-walk         Print all key matches walking along the chain
+                              of parent devices
+  -d --device-id-of-file=FILE Print major:minor of device containing this file
+  -x --export                 Export key/value pairs
+  -P --export-prefix          Export the key name with a prefix
+  -e --export-db              Export the content of the udev database
+  -c --cleanup-db             Clean up the udev database
+
+# udevadm trigger --help
+udevadm trigger OPTIONS
+
+Request events from the kernel.
+
+  -h --help                         Show this help
+     --version                      Show package version
+  -v --verbose                      Print the list of devices while running
+  -n --dry-run                      Do not actually trigger the events
+  -t --type=                        Type of events to trigger
+          devices                     sysfs devices (default)
+          subsystems                  sysfs subsystems and drivers
+  -c --action=ACTION                Event action value, default is "change"
+  -s --subsystem-match=SUBSYSTEM    Trigger devices from a matching subsystem
+  -S --subsystem-nomatch=SUBSYSTEM  Exclude devices from a matching subsystem
+  -a --attr-match=FILE[=VALUE]      Trigger devices with a matching attribute
+  -A --attr-nomatch=FILE[=VALUE]    Exclude devices with a matching attribute
+  -p --property-match=KEY=VALUE     Trigger devices with a matching property
+  -g --tag-match=KEY=VALUE          Trigger devices with a matching property
+  -y --sysname-match=NAME           Trigger devices with this /sys path
+     --name-match=NAME              Trigger devices with this /dev name
+  -b --parent-match=NAME            Trigger devices with that parent device
+
+# udevadm settle --help
+udevadm settle OPTIONS
+
+Wait for pending udev events.
+
+  -h --help                 Show this help
+     --version              Show package version
+  -t --timeout=SECONDS      Maximum time to wait for events
+  -E --exit-if-exists=FILE  Stop waiting if file exists
+
+# udevadm control --help
+udevadm control COMMAND
+
+Control the udev daemon.
+
+  -h --help                Show this help
+     --version             Show package version
+  -e --exit                Instruct the daemon to cleanup and exit
+  -l --log-priority=LEVEL  Set the udev log level for the daemon
+  -s --stop-exec-queue     Do not execute events, queue only
+  -S --start-exec-queue    Execute events, flush queue
+  -R --reload              Reload rules and databases
+  -p --property=KEY=VALUE  Set a global property for all events
+  -m --children-max=N      Maximum number of children
+     --timeout=SECONDS     Maximum time to block for a reply
+
+# udevadm monitor --help
+udevadm monitor [--property] [--kernel] [--udev] [--help]
+
+Listen to kernel and udev events.
+
+  -h --help                                Show this help
+     --version                             Show package version
+  -p --property                            Print the event properties
+  -k --kernel                              Print kernel uevents
+  -u --udev                                Print udev events
+  -s --subsystem-match=SUBSYSTEM[/DEVTYPE] Filter events by subsystem
+  -t --tag-match=TAG                       Filter events by tag
+
+# udevadm test --help
+udevadm test OPTIONS <syspath>
+
+Test an event run.
+  -h --help                            Show this help
+     --version                         Show package version
+  -a --action=ACTION                   Set action string
+  -N --resolve-names=early|late|never  When to resolve names
+
+# udevadm test-builtin --help
+udevadm builtin [--help] COMMAND SYSPATH
+
+Test a built-in command.
+
+  -h --help     Print this message
+     --version  Print version of the program
+
+Commands:
+  blkid           Filesystem and partition probing
+  btrfs           btrfs volume management
+  hwdb            Hardware database
+  input_id        Input device properties
+  keyboard        Keyboard scan code to key mapping
+  kmod            Kernel module loader
+  net_id          Network device properties
+  net_setup_link  Configure network link
+  path_id         Compose persistent device path
+  usb_id          USB device properties
+  uaccess         Manage device node user ACL
+
+$  udevadm info --name=/dev/pmem0
+P: /devices/LNXSYSTM:00/device:00/ACPI0012:00/ndbus0/region0/pfn0.1/block/pmem0
+N: pmem0
+S: disk/by-uuid/1f2c4045-3c47-4b76-a828-66ecb61c129e
+E: DEVLINKS=/dev/disk/by-uuid/1f2c4045-3c47-4b76-a828-66ecb61c129e
+E: DEVNAME=/dev/pmem0
+E: DEVPATH=/devices/LNXSYSTM:00/device:00/ACPI0012:00/ndbus0/region0/pfn0.1/block/pmem0
+E: DEVTYPE=disk
+E: ID_FS_TYPE=ext4
+E: ID_FS_USAGE=filesystem
+E: ID_FS_UUID=1f2c4045-3c47-4b76-a828-66ecb61c129e
+E: ID_FS_UUID_ENC=1f2c4045-3c47-4b76-a828-66ecb61c129e
+E: ID_FS_VERSION=1.0
+E: MAJOR=259
+E: MINOR=12
+E: SUBSYSTEM=block
+E: TAGS=:systemd:
+E: USEC_INITIALIZED=95449
+
+$  udevadm info --query=symlink --name=/dev/pmem0
+disk/by-uuid/1f2c4045-3c47-4b76-a828-66ecb61c129e
+
+$  udevadm info --attribute-walk --name=/dev/pmem0
+
+Udevadm info starts with the device specified by the devpath and then
+walks up the chain of parent devices. It prints for every device
+found, all possible attributes in the udev rules key format.
+A rule to match, can be composed by the attributes of the device
+and the attributes from one single parent device.
+
+  looking at device '/devices/LNXSYSTM:00/device:00/ACPI0012:00/ndbus0/region0/pfn0.1/block/pmem0':
+    KERNEL=="pmem0"
+    SUBSYSTEM=="block"
+    DRIVER==""
+    ATTR{ro}=="0"
+    ATTR{size}=="67104768"
+    ATTR{stat}=="       0        0        0        0        0        0        0        0        0        0        0"
+    ATTR{range}=="0"
+    ATTR{discard_alignment}=="0"
+    ATTR{ext_range}=="256"
+    ATTR{alignment_offset}=="0"
+    ATTR{badblocks}==""
+    ATTR{inflight}=="       0        0"
+    ATTR{removable}=="0"
+    ATTR{capability}=="50"
+
+  looking at parent device '/devices/LNXSYSTM:00/device:00/ACPI0012:00/ndbus0/region0/pfn0.1':
+    KERNELS=="pfn0.1"
+    SUBSYSTEMS=="nd"
+    DRIVERS=="nd_pmem"
+    ATTRS{mode}=="ram"
+    ATTRS{size}=="34357641216"
+    ATTRS{uuid}=="04cfee52-e6f5-4b20-aa63-19a747e626ce"
+    ATTRS{devtype}=="nd_pfn"
+    ATTRS{align}=="2097152"
+    ATTRS{supported_alignments}=="4096 2097152 1073741824 "
+    ATTRS{numa_node}=="-1"
+    ATTRS{namespace}=="namespace0.0"
+
+  looking at parent device '/devices/LNXSYSTM:00/device:00/ACPI0012:00/ndbus0/region0':
+    KERNELS=="region0"
+    SUBSYSTEMS=="nd"
+    DRIVERS=="nd_region"
+    ATTRS{size}=="34359738368"
+    ATTRS{available_size}=="0"
+    ATTRS{pfn_seed}=="pfn0.0"
+    ATTRS{devtype}=="nd_pmem"
+    ATTRS{dax_seed}=="dax0.0"
+    ATTRS{max_available_extent}=="0"
+    ATTRS{set_cookie}=="0x78f83d081e3e0f42"
+    ATTRS{mapping0}=="nmem0,0,17179869184,1"
+    ATTRS{mapping1}=="nmem1,0,17179869184,0"
+    ATTRS{mappings}=="2"
+    ATTRS{init_namespaces}=="1/1"
+    ATTRS{namespace_seed}=="namespace0.0"
+    ATTRS{nstype}=="4"
+    ATTRS{btt_seed}=="btt0.0"
+    ATTRS{badblocks}==""
+    ATTRS{numa_node}=="-1"
+    ATTRS{read_only}=="0"
+    ATTRS{deep_flush}=="0"
+
+  looking at parent device '/devices/LNXSYSTM:00/device:00/ACPI0012:00/ndbus0':
+    KERNELS=="ndbus0"
+    SUBSYSTEMS=="nd"
+    DRIVERS=="nd_bus"
+    ATTRS{wait_probe}=="1"
+    ATTRS{commands}=="ars_cap ars_start ars_status clear_error cmd_call "
+    ATTRS{provider}=="ACPI.NFIT"
+
+  looking at parent device '/devices/LNXSYSTM:00/device:00/ACPI0012:00':
+    KERNELS=="ACPI0012:00"
+    SUBSYSTEMS=="acpi"
+    DRIVERS=="nfit"
+    ATTRS{hid}=="ACPI0012"
+    ATTRS{path}=="\_SB_.NVDR"
+    ATTRS{status}=="15"
+
+  looking at parent device '/devices/LNXSYSTM:00/device:00':
+    KERNELS=="device:00"
+    SUBSYSTEMS=="acpi"
+    DRIVERS==""
+    ATTRS{path}=="\_SB_"
+
+  looking at parent device '/devices/LNXSYSTM:00':
+    KERNELS=="LNXSYSTM:00"
+    SUBSYSTEMS=="acpi"
+    DRIVERS==""
+    ATTRS{hid}=="LNXSYSTM"
+    ATTRS{path}=="\"
+
+# Create symlink to a device, e.g., /dev/my_pmem0 to /dev/pmem0
+$ cat /etc/udev/rules.d/90-mypmem.rules 
+KERNEL=="pmem0", SUBSYSTEM=="block", SYMLINK="my_pmem0"
+$ ls /dev/*pmem*
+/dev/pmem0
+$ udevadm trigger
+$ ls /dev/*pmem*
+/dev/my_pmem0  /dev/pmem0
+
+# udevadm control --reload
