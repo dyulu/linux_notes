@@ -1,0 +1,240 @@
+
+==== https://hub.docker.com/r/itsthenetwork/nfs-server-alpine
+
+docker run -d --name nfs --privileged -v /some/where/fileshare:/nfsshare -e SHARED_DIRECTORY=/nfsshare -p 2049:2049 itsthenetwork/nfs-server-alpine:latest
+
+-e READ_ONLY:                # ro instead of rw
+-e SYNC=true                 # ayns instead of async
+-e PERMITTED="10.11.99.*"    # permit only hosts with an IP address starting 10.11.99 to mount the file share
+
+
+==== https://www.tecmint.com/install-nfs-server-on-ubuntu/
+
+#### Install NFS Kernel Server
+$ sudo apt update
+$ sudo apt install nfs-kernel-server
+......
+Created symlink /etc/systemd/system/multi-user.target.wants/rpcbind.service → /lib/systemd/system/rpcbind.service.
+Created symlink /etc/systemd/system/sockets.target.wants/rpcbind.socket → /lib/systemd/system/rpcbind.socket.
+Setting up nfs-common (1:1.3.4-2.1ubuntu5.3) ...
+
+Creating config file /etc/idmapd.conf with new version
+Adding system user `statd' (UID 116) ...
+Adding new user `statd' (UID 116) with group `nogroup' ...
+Not creating home directory `/var/lib/nfs'.
+Created symlink /etc/systemd/system/multi-user.target.wants/nfs-client.target → /lib/systemd/system/nfs-client.target.
+Created symlink /etc/systemd/system/remote-fs.target.wants/nfs-client.target → /lib/systemd/system/nfs-client.target.
+nfs-utils.service is a disabled or a static unit, not starting it.
+Setting up nfs-kernel-server (1:1.3.4-2.1ubuntu5.3) ...
+Created symlink /etc/systemd/system/multi-user.target.wants/nfs-server.service → /lib/systemd/system/nfs-server.service.
+Job for nfs-server.service canceled.
+
+Creating config file /etc/exports with new version
+
+Creating config file /etc/default/nfs-kernel-server with new version
+Processing triggers for libc-bin (2.27-3ubuntu1.2) ...
+Processing triggers for ureadahead (0.100.0-20) ...
+Processing triggers for systemd (237-3ubuntu10.38) ...
+
+# Create an NFS Export Directory
+$ sudo mkdir -p /mnt/nfs_share
+$ sudo chown -R nobody:nogroup /mnt/nfs_share/  # Allow access to all clients
+$ sudo chmod 555 /mnt/nfs_share/                # Do not allow write
+
+# Grant NFS Share Access to Client
+$ sudo vim /etc/exports                         # Append: /mnt/nfs_share  192.168.43.0/24(ro,sync,no_subtree_check)
+
+# Export the NFS Share Directory
+sudo exportfs -a
+sudo systemctl restart nfs-kernel-server
+
+# Allow NFS Access through the Firewall
+$ sudo ufw allow from 192.168.43.0/24 to any port nfs
+$ sudo ufw enable
+$ sudo ufw status
+
+# Make sure ssh ports are open
+$ sudo ufw allow ssh
+
+# Show packages installed
+$ apt list --installed | grep nfs
+libnfsidmap2/bionic,now 0.25-5.1 amd64 [installed,automatic]
+nfs-common/bionic-security,now 1:1.3.4-2.1ubuntu5.3 amd64 [installed,automatic]
+nfs-kernel-server/bionic-security,now 1:1.3.4-2.1ubuntu5.3 amd64 [installed]
+
+
+# Other than port 111 and 2049, NFS uses another random port, which changes on every boot.
+# To fix that port, add RPCMOUNTDOPTS="-p 59185", port 59185 is just some port that is not in /etc/services
+
+$ grep 111 /etc/services 
+sunrpc		111/tcp		portmapper	# RPC 4.0 portmapper
+sunrpc		111/udp		portmapper
+$ grep 2049 /etc/services 
+nfs		2049/tcp			# Network File System
+nfs		2049/udp			# Network File System
+$ cat /etc/default/nfs-kernel-server
+# Number of servers to start up
+RPCNFSDCOUNT=8
+
+# Runtime priority of server (see nice(1))
+RPCNFSDPRIORITY=0
+
+# Options for rpc.mountd.
+# If you have a port-based firewall, you might want to set up
+# a fixed port here using the --port option. For more information, 
+# see rpc.mountd(8) or http://wiki.debian.org/SecuringNFS
+# To disable NFSv4 on the server, specify '--no-nfs-version 4' here
+RPCMOUNTDOPTS="--manage-gids"
+RPCMOUNTDOPTS="-p 59185"
+
+# Do you want to start the svcgssd daemon? It is only required for Kerberos
+# exports. Valid alternatives are "yes" and "no"; the default is "no".
+NEED_SVCGSSD=""
+
+# Options for rpc.svcgssd.
+RPCSVCGSSDOPTS=""
+
+$ sudo systemctl restart nfs-kernel-server
+$ sudo ufw allow from 192.168.43.0/24 to any port 111
+$ sudo ufw allow from 192.168.43.0/24 to any port 2049
+$ sudo ufw allow from 192.168.43.0/24 to any port 59185
+
+#### On client
+$ sudo apt update
+sudo apt install nfs-common
+mkdir -p ~/nfs_share
+sudo mount remote_nfs_server:/mnt/nfs_share ~/nfs_share
+ls ~/nfs_share
+
+#### debug NFS file access on server side
+
+$ rpcdebug -h
+usage: rpcdebug [-v] [-h] [-m module] [-s flags...|-c flags...]
+       set or cancel debug flags.
+       (use rpcdebug -vh to get a list of modules and valid flags)
+rpcdebug -vh
+usage: rpcdebug [-v] [-h] [-m module] [-s flags...|-c flags...]
+       set or cancel debug flags.
+
+Module     Valid flags
+rpc        xprt call debug nfs auth bind sched trans svcsock svcdsp misc cache all
+nfs        vfs dircache lookupcache pagecache proc xdr file root callback client mount fscache pnfs pnfs_ld state all
+nfsd       sock fh export svc proc fileop auth repcache xdr lockd all
+nlm        svc client clntlock svclock monitor clntsubs svcsubs hostcache xdr all
+
+Options:
+-c: Clear the given debug flags.
+-h: Print a help message and exit. When combined with the -v option, also prints the available debug flags.
+-m module: Specify which module's flags to set or clear. Available modules are:
+    nfsd: The NFS server.
+    nfs: The NFS client.
+    nlm :The Network Lock Manager, in either an NFS client or server.
+    rpc: The Remote Procedure Call module, in either an NFS client or server.
+-s: Set the given debug flags.
+-v: Increase the verbosity of rpcdebug's output.
+
+# start the logging
+$ rpcdebug -m nfsd -s proc
+$ tail -f /var/log/syslog       # while accessing nfs
+
+# stop the logging
+$ rpcdebug -m nfsd -c
+
+$ cat /proc/fs/nfsd/exports 
+$ cat /etc/exports
+$ rpcinfo -p
+ rpcinfo -p
+   program vers proto   port  service
+    100000    4   tcp    111  portmapper
+    100000    3   tcp    111  portmapper
+    100000    2   tcp    111  portmapper
+    100000    4   udp    111  portmapper
+    100000    3   udp    111  portmapper
+    100000    2   udp    111  portmapper
+    100005    1   udp  59185  mountd
+    100005    1   tcp  59185  mountd
+    100005    2   udp  59185  mountd
+    100005    2   tcp  59185  mountd
+    100005    3   udp  59185  mountd
+    100005    3   tcp  59185  mountd
+    100003    3   tcp   2049  nfs
+    100003    4   tcp   2049  nfs
+    100227    3   tcp   2049
+    100003    3   udp   2049  nfs
+    100227    3   udp   2049
+    100021    1   udp  45365  nlockmgr
+    100021    3   udp  45365  nlockmgr
+    100021    4   udp  45365  nlockmgr
+    100021    1   tcp  35903  nlockmgr
+    100021    3   tcp  35903  nlockmgr
+    100021    4   tcp  35903  nlockmgr
+
+#### debug NFS file access on client side
+
+$ rpcdebug -m nfs -s proc   # start
+$ rpcdebug -m nfs -c        # stop
+
+####
+
+$ showmount --help
+Usage: showmount [-adehv]
+       [--all] [--directories] [--exports]
+       [--no-headers] [--help] [--version] [host]
+
+$ rpcinfo -h
+rpcinfo: invalid option -- 'h'
+Usage: rpcinfo [-m | -s] [host]
+       rpcinfo -p [host]
+       rpcinfo -T netid host prognum [versnum]
+       rpcinfo -l host prognum versnum
+       rpcinfo [-n portnum] -u | -t host prognum [versnum]
+       rpcinfo -a serv_address -T netid prognum [version]
+       rpcinfo -b prognum versnum
+       rpcinfo -d [-T netid] prognum versnum
+
+# Show if remote_nfs_server has exported anything
+showmount -e remote_nfs_server
+
+# Check if remote_nfs_server runs NFSv3 or NFSv4 on TCP or UDP
+rpcinfo -u remote_nfs_server nfs 3
+rpcinfo -t remote_nfs_server nfs 4
+
+$ ufw -h
+ERROR: Invalid syntax
+
+Usage: ufw COMMAND
+
+Commands:
+ enable                          enables the firewall
+ disable                         disables the firewall
+ default ARG                     set default policy
+ logging LEVEL                   set logging to LEVEL
+ allow ARGS                      add allow rule
+ deny ARGS                       add deny rule
+ reject ARGS                     add reject rule
+ limit ARGS                      add limit rule
+ delete RULE|NUM                 delete RULE
+ insert NUM RULE                 insert RULE at NUM
+ route RULE                      add route RULE
+ route delete RULE|NUM           delete route RULE
+ route insert NUM RULE           insert route RULE at NUM
+ reload                          reload firewall
+ reset                           reset firewall
+ status                          show firewall status
+ status numbered                 show firewall status as numbered list of RULES
+ status verbose                  show verbose firewall status
+ show ARG                        show firewall report
+ version                         display version information
+
+Application profile commands:
+ app list                        list application profiles
+ app info PROFILE                show information on PROFILE
+ app update PROFILE              update PROFILE
+ app default ARG                 set default application policy
+
+$ ufw app list
+Available applications:
+  Apache
+  Apache Full
+  Apache Secure
+  OpenSSH
