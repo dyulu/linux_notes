@@ -1,0 +1,47 @@
+https://phoenixnap.com/kb/how-to-install-apache-web-server-on-ubuntu-18-04
+
+$ sudo apt-get update
+$ sudo apt-get install apache2
+......
+
+Created symlink /etc/systemd/system/multi-user.target.wants/apache2.service → /lib/systemd/system/apache2.service.
+Created symlink /etc/systemd/system/multi-user.target.wants/apache-htcacheclean.service → /lib/systemd/system/apache-htcacheclean.service.
+Processing triggers for libc-bin (2.27-3ubuntu1.2) ...
+Processing triggers for ureadahead (0.100.0-20) ...
+Processing triggers for systemd (237-3ubuntu10.38) ...
+Processing triggers for ufw (0.35-5) ...
+
+$ ufw app list
+Available applications:
+  Apache
+  Apache Full
+  Apache Secure
+  OpenSSH
+
+# Allow traffic on port 80
+$ ufw allow 'Apache'
+
+$ ufw status
+Status: active
+
+To                         Action      From
+--                         ------      ----
+22/tcp                     ALLOW       Anywhere                  
+Apache                     ALLOW       Anywhere                  
+22/tcp (v6)                ALLOW       Anywhere (v6)             
+Apache (v6)                ALLOW       Anywhere (v6)    
+
+# Manage the server
+$ sudo systemctl stop apache2.service
+$ sudo systemctl start apache2.service
+$ sudo systemctl restart apache2.service
+$ sudo systemctl reload apache2.service
+
+# Document root directory: /var/www/html
+# Log file:                /var/log/apache2/error.log
+# Access log:              /var/log/apache2/access.log
+# Configuration:           /etc/apache2/
+#    /etc/apache2/apache2.conf:    main config file
+#    /etc/apache2/ports.conf:      default 80
+#    /etc/apache2/sites-available: storage for Apache virtual host files
+#    /etc/apache2/sites-enabled:   holds websites that are ready to serve clients
