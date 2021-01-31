@@ -66,3 +66,244 @@ ipmitool -S cached_sdr_file sel elist: speed up sel elist command by using Senso
 
 user summary:
 user list:
+
+==== ipmi_cmd list
+Commands:
+	raw           Send a RAW IPMI request and print response
+	i2c           Send an I2C Master Write-Read command and print response
+	spd           Print SPD info from remote I2C device
+	lan           Configure LAN Channels
+	chassis       Get chassis status and set power state
+	power         Shortcut to chassis power commands
+	event         Send pre-defined events to MC
+	mc            Management Controller status and global enables
+	sdr           Print Sensor Data Repository entries and readings
+	sensor        Print detailed sensor information
+	fru           Print built-in FRU and scan SDR for FRU locators
+	gendev        Read/Write Device associated with Generic Device locators sdr
+	sel           Print System Event Log (SEL)
+	pef           Configure Platform Event Filtering (PEF)
+	sol           Configure and connect IPMIv2.0 Serial-over-LAN
+	tsol          Configure and connect with Tyan IPMIv1.5 Serial-over-LAN
+	isol          Configure IPMIv1.5 Serial-over-LAN
+	user          Configure Management Controller users
+	channel       Configure Management Controller channels
+	session       Print session information
+	dcmi          Data Center Management Interface
+	nm            Node Manager Interface
+	sunoem        OEM Commands for Sun servers
+	kontronoem    OEM Commands for Kontron devices
+	picmg         Run a PICMG/ATCA extended cmd
+	fwum          Update IPMC using Kontron OEM Firmware Update Manager
+	firewall      Configure Firmware Firewall
+	delloem       OEM Commands for Dell systems
+	exec          Run list of commands from file
+	set           Set runtime variable for shell and exec
+	hpm           Update HPM components using PICMG HPM.1 file
+	ekanalyzer    run FRU-Ekeying analyzer using FRU files
+	ime           Update Intel Manageability Engine Firmware
+	vita          Run a VITA 46.11 extended cmd
+	lan6          Configure IPv6 LAN Channels
+
+$ ipmitool chassis help
+Chassis Commands:  status, power, identify, policy, restart_cause, poh, bootdev, bootparam, selftest
+$ ipmitool chassis bootdev help
+bootdev <device> [clear-cmos=yes|no]
+bootdev <device> [options=help,...]
+  none  : Do not change boot device order
+  pxe   : Force PXE boot
+  disk  : Force boot from default Hard-drive
+  safe  : Force boot from default Hard-drive, request Safe Mode
+  diag  : Force boot from Diagnostic Partition
+  cdrom : Force boot from CD/DVD
+  bios  : Force boot into BIOS Setup
+  floppy: Force boot from Floppy/primary removable media
+$ ipmitool chassis bootdev disk options=help
+Legal options settings are:
+	help:	print this message
+	valid:	Boot flags valid
+	persistent:	Changes are persistent for all future boots
+	efiboot:	Extensible Firmware Interface Boot (EFI)
+	clear-cmos:	CMOS clear
+	lockkbd:	Lock Keyboard
+	screenblank:	Screen Blank
+	lockoutreset:	Lock out Resetbuttons
+	lockout_power:	Lock out (power off/sleep request) via Power Button
+	verbose=default:	Request quiet BIOS display
+	verbose=no:	Request quiet BIOS display
+	verbose=yes:	Request verbose BIOS display
+	force_pet:	Force progress event traps
+	upw_bypass:	User password bypass
+	lockout_sleep:	Log Out Sleep Button
+	cons_redirect=default:	Console redirection occurs per BIOS configuration setting
+	cons_redirect=skip:	Suppress (skip) console redirection if enabled
+	cons_redirect=enable:	Suppress (skip) console redirection if enabled
+$ ipmitool chassis bootparam help
+bootparam get <param #>
+bootparam set bootflag <device> [options=...]
+ Legal devices are:
+  none        : No override
+  force_pxe   : Force PXE boot
+  force_disk  : Force boot from default Hard-drive
+  force_safe  : Force boot from default Hard-drive, request Safe Mode
+  force_diag  : Force boot from Diagnostic Partition
+  force_cdrom : Force boot from CD/DVD
+  force_bios  : Force boot into BIOS Setup
+ Legal options are:
+  help    : print this message
+  PEF     : Clear valid bit on reset/power cycle cause by PEF
+  timeout : Automatically clear boot flag valid bit on timeout
+  watchdog: Clear valid bit on reset/power cycle cause by watchdog
+  reset   : Clear valid bit on push button reset/soft reset
+  power   : Clear valid bit on power up via power push button or wake event
+ Any Option may be prepended with no- to invert sense of operation
+
+$ ipmitool chassis bootparam get 5     # See "Boot Device Selector" to determine the default boot dev 
+
+$ ipmitool lan help
+LAN Commands:
+		   print [<channel number>]
+		   set <channel number> <command> <parameter>
+		   alert print <channel number> <alert destination>
+		   alert set <channel number> <alert destination> <command> <parameter>
+		   stats get [<channel number>]
+		   stats clear [<channel number>]
+
+$ ipmitool sol help
+SOL Commands: info [<channel number>]
+              set <parameter> <value> [channel]
+              payload <enable|disable|status> [channel] [userid]
+              activate [<usesolkeepalive|nokeepalive>] [instance=<number>]
+              deactivate [instance=<number>]
+              looptest [<loop times> [<loop interval(in ms)> [<instance>]]]
+
+$ ipmitool user help
+User Commands:
+               summary      [<channel number>]
+               list         [<channel number>]
+               set name     <user id> <username>
+               set password <user id> [<password> <16|20>]
+               disable      <user id>
+               enable       <user id>
+               priv         <user id> <privilege level> [<channel number>]
+                     Privilege levels:
+                      * 0x1 - Callback
+                      * 0x2 - User
+                      * 0x3 - Operator
+                      * 0x4 - Administrator
+                      * 0x5 - OEM Proprietary
+                      * 0xF - No Access
+
+               test         <user id> <16|20> [<password]>
+
+==== ipmiutil
+
+$ ipmiutil
+ipmiutil ver 3.07
+Usage: ipmiutil <command> [other options]
+   where <command> is one of the following:
+	alarms	show/set the front panel alarm LEDs and relays
+	leds	show/set the front panel alarm LEDs and relays
+	discover	discover all IPMI servers on this LAN
+	cmd	send a specified raw IPMI command to the BMC
+	config	list/save/restore BMC configuration parameters
+	dcmi	get/set DCMI parameters
+	ekanalyzer	run EKeying analyzer on FRU files (deprecated, see fru)
+	events	decode IPMI events and display them
+	firewall	show/set firmware firewall functions
+	fru	show decoded FRU inventory data, write asset tag
+	fwum	OEM firmware update manager extensions
+	getevt	get IPMI events and display them, event daemon
+	getevent	get IPMI events and display them, event daemon
+	health	check and show the basic health of the IPMI BMC
+	hpm	HPM firmware update manager extensions
+	lan	show/set IPMI LAN parameters, users, PEF rules
+	picmg	show/set picmg extended functions
+	power	issue IPMI reset or power control to the system
+	reset	issue IPMI reset or power control to the system
+	sel	show/clear firmware System Event Log records
+	sensor	show Sensor Data Records, readings, thresholds
+	serial	show/set IPMI Serial & Terminal Mode parameters
+	sol	start/stop an SOL console session
+	smcoem	SuperMicro OEM functions
+	sunoem	Sun OEM functions
+	delloem	Dell OEM functions
+	tsol	Tyan SOL console start/stop session
+	user	list or modify IPMI LAN users
+	wdt	show/set/reset the watchdog timer
+   common IPMI LAN options:
+       -N node  Nodename or IP address of target system
+       -U user  Username for remote node
+       -P/-R pswd  Remote Password
+       -E   use password from Environment IPMI_PASSWORD
+       -F   force driver type (e.g. imb, lan2)
+       -J 0 use lanplus cipher suite 0: 0 thru 14, 3=default
+       -T 1 use auth Type: 1=MD2, 2=MD5(default), 4=Pswd
+       -V 2 use priVilege level: 2=user(default), 4=admin
+       -Y   prompt for remote password
+       -Z   set slave address of local MC
+For help on each command (e.g. 'sel'), enter:
+   ipmiutil sel -?
+ipmiutil , usage or help requested
+
+$ ipmiutil sel -?
+ipmiutil ver 3.07
+isel: version 3.07
+Usage: isel [-bcdefmnprsuvwx] [-l 5] [-NUPREFTVY]
+   -b  interpret Binary file with raw SEL data
+   -c  Show canonical output with delimiters
+   -d  Delete, Clears all SEL records
+   -e  shows Extended sensor description if run locally
+   -f  interpret File with ascii hex SEL data
+   -l5 Show last 5 SEL records (reverse order)
+   -r  Show uninterpreted raw SEL records in ascii hex
+   -n  Show nominal/canonical output (same as -c)
+   -s1 Show only Severity >= value (0,1,2,3)
+   -u  use raw UTC time
+   -v  Only show version information
+   -w  Writes new SEL records to syslog
+   -x  Display extra debug messages
+
+$ ipmiutil sol -?
+ipmiutil ver 3.07
+isol ver 3.07
+Usage: isol [-acdeiolnrsvxz -NUPREFTVY]
+ where -a     activate SOL console session
+       -d     deactivate SOL console session
+       -c'^'  set escape Char to '^', default='~'
+       -e     Encryption off for SOL session
+       -i file  Input script file
+       -o file  Output trace file
+       -l     Legacy mode for BIOS/DOS CR+LF
+       -n 1   Payload instance Number, default=1
+       -r     Raw termio, no VT-ANSI translation
+       -s NNN Slow link delay, default=100usec
+       -v     debug log filename (default=isoldbg.log)
+       -x     show eXtra debug messages in debug log
+       -z     show even more debug messages
+
+$ ipmiutil power -?          # same as reset
+ipmiutil ver 3.07
+ireset ver 3.07
+Usage: ireset [-bcdDefhkmnoprsuwxy -N node -U user -P/-R pswd -EFTVY]
+ where -c  power Cycles the system
+       -d  powers Down the system
+       -D  soft-shutdown OS and power down
+       -k  do Cold Reset of the BMC firmware
+       -i<str>  set boot Initiator mailbox string
+       -j<num>  set IANA number for boot Initiator
+       -n  sends NMI to the system
+       -o  soft-shutdown OS and reset
+       -r  hard Resets the system
+       -u  powers Up the system
+       -m002000 specific MC (bus 00,sa 20,lun 00)
+       -b  reboots to BIOS Setup
+       -e  reboots to EFI
+       -f  reboots to Floppy/Removable
+       -h  reboots to Hard Disk
+       -p  reboots to PXE via network
+       -s  reboots to Service Partition
+       -v  reboots to DVD/CDROM Media
+       -w  Wait for BMC ready after reset
+       -x  show eXtra debug messages
+       -y  Yes, persist boot options [-befhpms]
