@@ -77,6 +77,14 @@ docker run ubuntu sleep 100                 # Run a command when start the conta
 docker exec container_name cat /etc/hosts   # Run a command in your container
 docker exec -u 0 -it container_name bash
 
+### Start a stopped Docker container with a different command
+# Find the id of the stoped container
+docker ps -a
+# Commit the stopped container
+docker commit $CONTAINER_ID test_image
+# Run with a different entry point
+docker run -it --entrypoint=sh test_image
+
 # Spin up a container to view the contents of docker volume vol_name
 docker run --rm -it -v vol_name:/vol_name alpine /bin/sh
 # View the contents of docker volume vol_name via http
