@@ -1,0 +1,89 @@
+cat /etc/apt/sources.list
+apt-get update -y
+apt-get install -y cron
+
+
+$ cat /etc/cron.d/hello-cron
+* * * * * echo "Hello world" >> /var/log/cron.log 2>&1
+
+$ chmod 0644 /etc/cron.d/hello-cron  # -rw-r--r--; If a script is to be run from here, the script has to be in mode 0744
+$ crontab /etc/cron.d/hello-cron     # Apply the cron job
+$ cron
+
+# Cron checks these files and directories:
+#   /etc/crontab: system crontab
+#   /etc/cron.d/: directory that contains system cronjobs stored for different users
+#   /var/spool/cron: directory that contains user crontables created by the crontab command
+# All crontab files have to be regular files or symlinks to regular files,
+# they must not be executable or writable for anyone else but the owner.
+
+# /etc/cron.{hourly,daily,weekly,monthly}
+
+# Crontab is the program used to install a crontab table file, remove or list the existing tables used to serve the cron daemon.
+# Running  cron  jobs  can  be allowed or disallowed for different users.  For this purpose, use the cron.allow and cron.deny files.
+#   /etc/cron.allow
+#   /etc/cron.deny
+# crontab [-u user] <file | ->
+# crontab [-u user] <-l | -r | -e> [-i] [-s]
+# crontab -n [ hostname ]
+# crontab -c
+# crontab -V
+#   -l     Displays the current crontab on standard output.
+#   -r     Removes the current crontab.
+#   -e     Edits the current crontab using the editor specified by the VISUAL or EDITOR environment variables.
+#          After you exit from the editor, the modified crontab will be installed automatically.
+#   -i     This option modifies the -r option to prompt the user for a 'y/Y' response before actually removing the crontab.
+#   -s     Appends the current SELinux security context string as an MLS_LEVEL setting to the crontab file before editing/replacement occurs
+#   -c     Enable clustering support
+#   -n     This option is relevant only if cron was started with the -c option
+#   -V     Print version and exit.
+# For replacing the current crontab with data from standard input, the  -  has  to  be specified on the command line
+
+
+# To pause a crontab job, use "crontab -e" and comment out the job
+
+====
+Each line in the user crontab file contains six fields separated by a space followed by the command to be run.
+
+* * * * * command(s)
+- - - - -
+| | | | |
+| | | | ----- Day of week (0 - 7) (Sunday=0 or 7)
+| | | ------- Month (1 - 12)
+| | --------- Day of month (1 - 31)
+| ----------- Hour (0 - 23)
+------------- Minute (0 - 59)
+
+The first five fields may contain one or more values, separated by a comma or a range of values separated by a hyphen.
+
+* Any value or always. If you have the asterisk symbol in the Hour field, it means the task will be performed each hour.
+, Allows you to specify a list of values for repetition. For example, if you have 1,3,5 in the Hour field, the task will run at 1 am, 3 am and 5 am.
+- Allows you to specify a range of values. If you have 1-5 in the Day of week field, the task will run every weekday (From Monday to Friday).
+/ Allows you to specify values that will be repeated over a certain interval between them. For example, if you have */4 in the Hour field, it means
+  the action will be performed every four hours. It is same as specifying 0,4,8,12,16,20. Instead of asterisk before the slash operator, you can also
+  use a range of values, 1-30/10 means the same as 1,11,21.
+
+====
+Cron special keywords and its meaning
+
+Keyword    Equivalent
+@yearly    0 0 1 1 *
+@daily     0 0 * * *
+@hourly    0 * * * *
+@reboot    Run at startup.
+
+====
+Cron Job                     Command
+Every Minute                 * * * * * cmd
+Every 30 Minutes             30 * * * * cmd
+Every Hour                   0 * * * * cmd
+Every Day at Midnight        0 0 * * * cmd
+At 2 am Every Day            0 2 * * * cmd
+Every 1st of the Month       0 0 1 * * cmd
+Every 15th of the Month      0 0 15 * * cmd
+On December 1st – Midnight   0 0 0 12 * cmd
+On Saturday at Midnight      0 0 * * 6 cmd
+Every 15 minutes             */15 * * * * cmd
+Every weekday at 4am         0 4 * * 1-5 cmd
+Every Tue and Thur at 4am    0 4 * * 2,4 cmd
+Every other day at 37 min pass the hour   37 1-23/2 * * *
