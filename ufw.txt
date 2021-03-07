@@ -1,0 +1,95 @@
+
+$ ufw enable                # ufw disable
+$ ufw status verbose
+$ ls /etc/ufw/*.rules       # ufw show raw
+
+# ufw allow <port>/<optional: protocol>
+# ufw deny <port>/<optional: protocol>
+
+# Allow incoming tcp and udp packet on port 53
+$ ufw allow 53
+
+# Allow incoming tcp packets on port 53
+$ ufw allow 53/tcp
+
+# Allow incoming udp packets on port 53
+$ ufw allow 53/udp
+
+# Delete a rule, simply prefix the original rule with delete
+$ ufw deny 80/tcp
+$ ufw delete deny 80/tcp
+
+# Allow or deny by service name since ufw reads from /etc/services
+$ cat /etc/services
+# ufw allow <service name>
+# ufw deny <service name>
+$ ufw allow ssh
+$ ufw deny ssh
+
+$ ufw logging on
+$ ufw logging off
+
+# ufw allow from <ip address>
+$ ufw allow from 192.168.1.1
+$ ufw allow from 192.168.1.0/24
+
+# ufw allow from <target> to <destination> port <port number>
+# ufw allow from 192.168.0.4 to any port 22
+
+# ufw allow from <target> to <destination> port <port number> proto <protocol name>
+$ ufw allow from 192.168.0.4 to any port 22 proto tcp
+
+# Disable ping (icmp) requests, you need to edit /etc/ufw/before.rules and remove the following lines:
+
+-A ufw-before-input -p icmp --icmp-type destination-unreachable -j ACCEPT
+-A ufw-before-input -p icmp --icmp-type source-quench -j ACCEPT
+-A ufw-before-input -p icmp --icmp-type time-exceeded -j ACCEPT
+-A ufw-before-input -p icmp --icmp-type parameter-problem -j ACCEPT
+-A ufw-before-input -p icmp --icmp-type echo-request -j ACCEPT
+
+or change the "ACCEPT" to "DROP"
+
+-A ufw-before-input -p icmp --icmp-type destination-unreachable -j DROP
+-A ufw-before-input -p icmp --icmp-type source-quench -j DROP
+-A ufw-before-input -p icmp --icmp-type time-exceeded -j DROP
+-A ufw-before-input -p icmp --icmp-type parameter-problem -j DROP
+-A ufw-before-input -p icmp --icmp-type echo-request -j DROP
+
+# ufw deny from <ip address>
+# ufw deny from <ip address> to <protocol> port <port number>
+
+# Listing rules with a reference number
+$ ufw status numbered
+
+# ufw delete rule_num
+# ufw insert 1 allow from <ip address>
+
+$ ufw COMMAND
+
+Commands:
+ enable                          enables the firewall
+ disable                         disables the firewall
+ default ARG                     set default policy
+ logging LEVEL                   set logging to LEVEL
+ allow ARGS                      add allow rule
+ deny ARGS                       add deny rule
+ reject ARGS                     add reject rule
+ limit ARGS                      add limit rule
+ delete RULE|NUM                 delete RULE
+ insert NUM RULE                 insert RULE at NUM
+ route RULE                      add route RULE
+ route delete RULE|NUM           delete route RULE
+ route insert NUM RULE           insert route RULE at NUM
+ reload                          reload firewall
+ reset                           reset firewall
+ status                          show firewall status
+ status numbered                 show firewall status as numbered list of RULES
+ status verbose                  show verbose firewall status
+ show ARG                        show firewall report
+ version                         display version information
+
+Application profile commands:
+ app list                        list application profiles
+ app info PROFILE                show information on PROFILE
+ app update PROFILE              update PROFILE
+ app default ARG                 set default application policy
