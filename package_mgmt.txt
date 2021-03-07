@@ -1,0 +1,523 @@
+==== Alpine
+$ cat /etc/apk/repositories
+
+$ apk [<OPTIONS>...] COMMAND [<ARGUMENTS>...]
+
+Package installation and removal:
+  add        Add packages to WORLD and commit changes
+  del        Remove packages from WORLD and commit changes
+
+System maintenance:
+  fix        Fix, reinstall or upgrade packages without modifying WORLD
+  update     Update repository indexes
+  upgrade    Install upgrades available from repositories
+  cache      Manage the local package cache
+
+Querying package information:
+  info       Give detailed information about packages or repositories
+  list       List packages matching a pattern or other criteria
+  dot        Render dependencies as graphviz graphs
+  policy     Show repository policy for packages
+
+Repository maintenance:
+  index      Create repository index file from packages
+  fetch      Download packages from global repositories to a local directory
+  manifest   Show checksums of package contents
+  verify     Verify package integrity and signature
+
+Miscellaneous:
+  audit      Audit system for changes
+  stats      Show statistics about repositories and installations
+  version    Compare package versions or perform tests on version strings
+
+==== Ubuntu/Debian
+$ cat /etc/apt/sources.list
+
+$ apt [options] command
+
+apt is a commandline package manager and provides commands for
+searching and managing as well as querying information about packages.
+It provides the same functionality as the specialized APT tools,
+like apt-get and apt-cache, but enables options more suitable for
+interactive use by default.
+
+Most used commands:
+  list - list packages based on package names
+  search - search in package descriptions
+  show - show package details
+  install - install packages
+  remove - remove packages
+  autoremove - Remove automatically all unused packages
+  update - update list of available packages
+  upgrade - upgrade the system by installing/upgrading packages
+  full-upgrade - upgrade the system by removing/installing/upgrading packages
+  edit-sources - edit the source information file
+
+$ apt-get [options] command
+  apt-get [options] install|remove pkg1 [pkg2 ...]
+  apt-get [options] source pkg1 [pkg2 ...]
+
+apt-get is a command line interface for retrieval of packages
+and information about them from authenticated sources and
+for installation, upgrade and removal of packages together
+with their dependencies.
+
+Most used commands:
+  update - Retrieve new lists of packages
+  upgrade - Perform an upgrade
+  install - Install new packages (pkg is libc6 not libc6.deb)
+  remove - Remove packages
+  purge - Remove packages and config files
+  autoremove - Remove automatically all unused packages
+  dist-upgrade - Distribution upgrade, see apt-get(8)
+  dselect-upgrade - Follow dselect selections
+  build-dep - Configure build-dependencies for source packages
+  clean - Erase downloaded archive files
+  autoclean - Erase old downloaded archive files
+  check - Verify that there are no broken dependencies
+  source - Download source archives
+  download - Download the binary package into the current directory
+  changelog - Download and display the changelog for the given package
+
+$ apt-cache [options] command
+  apt-cache [options] show pkg1 [pkg2 ...]
+
+apt-cache queries and displays available information about installed
+and installable packages. It works exclusively on the data acquired
+into the local cache via the 'update' command of e.g. apt-get. The
+displayed information may therefore be outdated if the last update was
+too long ago, but in exchange apt-cache works independently of the
+availability of the configured sources (e.g. offline).
+
+Most used commands:
+  showsrc - Show source records
+  search - Search the package list for a regex pattern
+  depends - Show raw dependency information for a package
+  rdepends - Show reverse dependency information for a package
+  show - Show a readable record for the package
+  pkgnames - List the names of all packages in the system
+  policy - Show policy settings
+
+====RHEL
+
+rpm: RPM Package Manager
+yum: Yellow Dog Updater
+dnf: Modified/Dandified YUM
+
+        Base Repos                        Optional/Development Repos
+RHEL 6  rhel-6-server-rpms                rhel-6-server-optional-rpms
+RHEL 7  rhel-7-server-rpms                rhel-7-server-optional-rpms
+RHEL 8  rhel-8-for-x86_64-baseos-rpms 
+        rhel-8-for-x86_64-appstream-rpms  codeready-builder-for-rhel-8-x86_64-rpms
+
+$ cat /etc/yum.repos.d/redhat.repo
+
+$ yum repolist all
+
+$ subscription-manager repos --list
+
+$ subscription-manager repos --enable=rhel-6-server-optional-rpms
+
+$ subscription-manager repos --disable=rhel-6-server-optional-rpms
+
+
+
+$ rpm [OPTION...]
+
+Query/Verify package selection options:
+  -a, --all                          query/verify all packages
+  -f, --file                         query/verify package(s) owning file
+  -g, --group                        query/verify package(s) in group
+  -p, --package                      query/verify a package file
+      --pkgid                        query/verify package(s) with package identifier
+      --hdrid                        query/verify package(s) with header identifier
+      --triggeredby                  query the package(s) triggered by the package
+      --whatconflicts                query/verify the package(s) which require a dependency
+      --whatrequires                 query/verify the package(s) which require a dependency
+      --whatobsoletes                query/verify the package(s) which obsolete a dependency
+      --whatprovides                 query/verify the package(s) which provide a dependency
+      --whatrecommends               query/verify the package(s) which recommends a dependency
+      --whatsuggests                 query/verify the package(s) which suggests a dependency
+      --whatsupplements              query/verify the package(s) which supplements a dependency
+      --whatenhances                 query/verify the package(s) which enhances a dependency
+      --nomanifest                   do not process non-package files as manifests
+
+Query options (with -q or --query):
+  -c, --configfiles                  list all configuration files
+  -d, --docfiles                     list all documentation files
+  -L, --licensefiles                 list all license files
+  -A, --artifactfiles                list all artifact files
+      --dump                         dump basic file information
+  -l, --list                         list files in package
+      --queryformat=QUERYFORMAT      use the following query format
+  -s, --state                        display the states of the listed files
+
+Verify options (with -V or --verify):
+      --nofiledigest                 don't verify digest of files
+      --nofiles                      don't verify files in package
+      --nodeps                       don't verify package dependencies
+      --noscript                     don't execute verify script(s)
+
+Install/Upgrade/Erase options:
+      --allfiles                     install all files, even configurations which might otherwise be skipped
+      --allmatches                   remove all packages which match <package> (normally an error is generated if <package> specified multiple packages)
+      --badreloc                     relocate files in non-relocatable package
+  -e, --erase=<package>+             erase (uninstall) package
+      --excludedocs                  do not install documentation
+      --excludepath=<path>           skip files with leading component <path> 
+      --force                        short hand for --replacepkgs --replacefiles
+  -F, --freshen=<packagefile>+       upgrade package(s) if already installed
+  -h, --hash                         print hash marks as package installs (good with -v)
+      --ignorearch                   don't verify package architecture
+      --ignoreos                     don't verify package operating system
+      --ignoresize                   don't check disk space before installing
+      --noverify                     short hand for --ignorepayload --ignoresignature
+  -i, --install                      install package(s)
+      --justdb                       update the database, but do not modify the filesystem
+      --nodeps                       do not verify package dependencies
+      --nofiledigest                 don't verify digest of files
+      --nocontexts                   don't install file security contexts
+      --nocaps                       don't install file capabilities
+      --noorder                      do not reorder package installation to satisfy dependencies
+      --noscripts                    do not execute package scriptlet(s)
+      --notriggers                   do not execute any scriptlet(s) triggered by this package
+      --oldpackage                   upgrade to an old version of the package (--force on upgrades does this automatically)
+      --percent                      print percentages as package installs
+      --prefix=<dir>                 relocate the package to <dir>, if relocatable
+      --relocate=<old>=<new>         relocate files from path <old> to <new>
+      --replacefiles                 ignore file conflicts between packages
+      --replacepkgs                  reinstall if the package is already present
+      --test                         don't install, but tell if it would work or not
+  -U, --upgrade=<packagefile>+       upgrade package(s)
+      --reinstall=<packagefile>+     reinstall package(s)
+
+Common options for all rpm modes and executables:
+  -D, --define='MACRO EXPR'          define MACRO with value EXPR
+      --undefine=MACRO               undefine MACRO
+  -E, --eval='EXPR'                  print macro expansion of EXPR
+      --target=CPU-VENDOR-OS         Specify target platform
+      --macros=<FILE:...>            read <FILE:...> instead of default file(s)
+      --noplugins                    don't enable any plugins
+      --nodigest                     don't verify package digest(s)
+      --nosignature                  don't verify package signature(s)
+      --rcfile=<FILE:...>            read <FILE:...> instead of default file(s)
+  -r, --root=ROOT                    use ROOT as top level directory (default: "/")
+      --dbpath=DIRECTORY             use database in DIRECTORY
+      --querytags                    display known query tags
+      --showrc                       display final rpmrc and macro configuration
+      --quiet                        provide less detailed output
+  -v, --verbose                      provide more detailed output
+      --version                      print the version of rpm being used
+
+Options implemented via popt alias/exec:
+      --scripts                      list install/erase scriptlets from package(s)
+      --setperms                     set permissions of files in a package
+      --setugids                     set user/group ownership of files in a package
+      --setcaps                      set capabilities of files in a package
+      --restore                      restore file/directory permissions
+      --conflicts                    list capabilities this package conflicts with
+      --obsoletes                    list other packages removed by installing this package
+      --provides                     list capabilities that this package provides
+      --requires                     list capabilities required by package(s)
+      --recommends                   list capabilities recommended by package(s)
+      --suggests                     list capabilities suggested by package(s)
+      --supplements                  list capabilities supplemented by package(s)
+      --enhances                     list capabilities enhanced by package(s)
+      --info                         list descriptive information from package(s)
+      --changelog                    list change logs for this package
+      --changes                      list changes for this package with full time stamps
+      --xml                          list metadata in xml
+      --triggers                     list trigger scriptlets from package(s)
+      --filetriggers                 list filetrigger scriptlets from package(s)
+      --last                         list package(s) by install time, most recent first
+      --dupes                        list duplicated packages
+      --filesbypkg                   list all files from each package
+      --fileclass                    list file names with their classes
+      --filecolor                    list file names with their colors
+      --fileprovide                  list file names with their provides
+      --filerequire                  list file names with requires
+      --filecaps                     list file names with their POSIX1.e capabilities
+
+$ yum [options] COMMAND
+
+List of Main Commands:
+
+alias                     List or create command aliases
+autoremove                remove all unneeded packages that were originally installed as dependencies
+check                     check for problems in the packagedb
+check-update              check for available package upgrades
+clean                     remove cached data
+deplist                   List package's dependencies and what packages provide them
+distro-sync               synchronize installed packages to the latest available versions
+downgrade                 Downgrade a package
+group                     display, or use, the groups information
+help                      display a helpful usage message
+history                   display, or use, the transaction history
+info                      display details about a package or group of packages
+install                   install a package or packages on your system
+list                      list a package or groups of packages
+makecache                 generate the metadata cache
+mark                      mark or unmark installed packages as installed by user.
+module                    Interact with Modules.
+provides                  find what package provides the given value
+reinstall                 reinstall a package
+remove                    remove a package or packages from your system
+repolist                  display the configured software repositories
+repoquery                 search for packages matching keyword
+repository-packages       run commands on top of all packages in given repository
+search                    search package details for the given string
+shell                     run an interactive YUM shell
+swap                      run an interactive YUM mod for remove and install one spec
+updateinfo                display advisories about packages
+upgrade                   upgrade a package or packages on your system
+upgrade-minimal           upgrade, but only 'newest' package match which fixes a problem that affects your system
+
+List of Plugin Commands:
+
+builddep                  Install build dependencies for package or spec file
+changelog                 Show changelog data of packages
+config-manager            manage yum configuration options and repositories
+copr                      Interact with Copr repositories.
+debug-dump                dump information about installed rpm packages to file
+debug-restore             restore packages recorded in debug-dump file
+debuginfo-install         install debuginfo packages
+download                  Download package to current directory
+needs-restarting          determine updated binaries that need restarting
+playground                Interact with Playground repository.
+repoclosure               Display a list of unresolved dependencies for repositories
+repodiff                  List differences between two sets of repositories
+repograph                 Output a full package dependency graph in dot format
+repomanage                Manage a directory of rpm packages
+reposync                  download all packages from remote repo
+uploadprofile             Upload combined profile to Satellite server (list of installed rpms, enabled repositories and modules
+
+General YUM options:
+  -c [config file], --config [config file]
+                        config file location
+  -q, --quiet           quiet operation
+  -v, --verbose         verbose operation
+  --version             show YUM version and exit
+  --installroot [path]  set install root
+  --nodocs              do not install documentations
+  --noplugins           disable all plugins
+  --enableplugin [plugin]
+                        enable plugins by name
+  --disableplugin [plugin]
+                        disable plugins by name
+  --releasever RELEASEVER
+                        override the value of $releasever in config and repo
+                        files
+  --setopt SETOPTS      set arbitrary config and repo options
+  --skip-broken         resolve depsolve problems by skipping packages
+  -h, --help, --help-cmd
+                        show command help
+  --allowerasing        allow erasing of installed packages to resolve
+                        dependencies
+  -b, --best            try the best available package versions in
+                        transactions.
+  --nobest              do not limit the transaction to the best candidate
+  -C, --cacheonly       run entirely from system cache, don't update cache
+  -R [minutes], --randomwait [minutes]
+                        maximum command wait time
+  -d [debug level], --debuglevel [debug level]
+                        debugging output level
+  --debugsolver         dumps detailed solving results into files
+  --showduplicates      show duplicates, in repos, in list/search commands
+  -e ERRORLEVEL, --errorlevel ERRORLEVEL
+                        error output level
+  --obsoletes           enables yum's obsoletes processing logic for upgrade
+                        or display capabilities that the package obsoletes for
+                        info, list and repoquery
+  --rpmverbosity [debug level name]
+                        debugging output level for rpm
+  -y, --assumeyes       automatically answer yes for all questions
+  --assumeno            automatically answer no for all questions
+  --enablerepo [repo]   Enable additional repositories. List option. Supports
+                        globs, can be specified multiple times.
+  --disablerepo [repo]  Disable repositories. List option. Supports globs, can
+                        be specified multiple times.
+  --repo [repo], --repoid [repo]
+                        enable just specific repositories by an id or a glob,
+                        can be specified multiple times
+  --enable              enable repos with config-manager command
+                        (automatically saves)
+  --disable             disable repos with config-manager command
+                        (automatically saves)
+  -x [package], --exclude [package], --excludepkgs [package]
+                        exclude packages by name or glob
+  --disableexcludes [repo], --disableexcludepkgs [repo]
+                        disable excludepkgs
+  --repofrompath [repo,path]
+                        label and path to an additional repository to use
+                        (same path as in a baseurl), can be specified multiple
+                        times.
+  --noautoremove        disable removal of dependencies that are no longer
+                        used
+  --nogpgcheck          disable gpg signature checking (if RPM policy allows)
+  --color COLOR         control whether color is used
+  --refresh             set metadata as expired before running the command
+  -4                    resolve to IPv4 addresses only
+  -6                    resolve to IPv6 addresses only
+  --destdir DESTDIR, --downloaddir DESTDIR
+                        set directory to copy packages to
+  --downloadonly        only download packages
+  --comment COMMENT     add a comment to transaction
+  --bugfix              Include bugfix relevant packages, in updates
+  --enhancement         Include enhancement relevant packages, in updates
+  --newpackage          Include newpackage relevant packages, in updates
+  --security            Include security relevant packages, in updates
+  --advisory ADVISORY, --advisories ADVISORY
+                        Include packages needed to fix the given advisory, in
+                        updates
+  --bz BUGZILLA, --bzs BUGZILLA
+                        Include packages needed to fix the given BZ, in
+                        updates
+  --cve CVES, --cves CVES
+                        Include packages needed to fix the given CVE, in
+                        updates
+  --sec-severity {Critical,Important,Moderate,Low}, --secseverity {Critical,Important,Moderate,Low}
+                        Include security relevant packages matching the
+                        severity, in updates
+  --forcearch ARCH      Force the use of an architecture
+
+$ dnf [options] COMMAND
+
+List of Main Commands:
+
+alias                     List or create command aliases
+autoremove                remove all unneeded packages that were originally installed as dependencies
+check                     check for problems in the packagedb
+check-update              check for available package upgrades
+clean                     remove cached data
+deplist                   List package's dependencies and what packages provide them
+distro-sync               synchronize installed packages to the latest available versions
+downgrade                 Downgrade a package
+group                     display, or use, the groups information
+help                      display a helpful usage message
+history                   display, or use, the transaction history
+info                      display details about a package or group of packages
+install                   install a package or packages on your system
+list                      list a package or groups of packages
+makecache                 generate the metadata cache
+mark                      mark or unmark installed packages as installed by user.
+module                    Interact with Modules.
+provides                  find what package provides the given value
+reinstall                 reinstall a package
+remove                    remove a package or packages from your system
+repolist                  display the configured software repositories
+repoquery                 search for packages matching keyword
+repository-packages       run commands on top of all packages in given repository
+search                    search package details for the given string
+shell                     run an interactive DNF shell
+swap                      run an interactive DNF mod for remove and install one spec
+updateinfo                display advisories about packages
+upgrade                   upgrade a package or packages on your system
+upgrade-minimal           upgrade, but only 'newest' package match which fixes a problem that affects your system
+
+List of Plugin Commands:
+
+builddep                  Install build dependencies for package or spec file
+changelog                 Show changelog data of packages
+config-manager            manage dnf configuration options and repositories
+copr                      Interact with Copr repositories.
+debug-dump                dump information about installed rpm packages to file
+debug-restore             restore packages recorded in debug-dump file
+debuginfo-install         install debuginfo packages
+download                  Download package to current directory
+needs-restarting          determine updated binaries that need restarting
+playground                Interact with Playground repository.
+repoclosure               Display a list of unresolved dependencies for repositories
+repodiff                  List differences between two sets of repositories
+repograph                 Output a full package dependency graph in dot format
+repomanage                Manage a directory of rpm packages
+reposync                  download all packages from remote repo
+uploadprofile             Upload combined profile to Satellite server (list of installed rpms, enabled repositories and modules
+
+General DNF options:
+  -c [config file], --config [config file]
+                        config file location
+  -q, --quiet           quiet operation
+  -v, --verbose         verbose operation
+  --version             show DNF version and exit
+  --installroot [path]  set install root
+  --nodocs              do not install documentations
+  --noplugins           disable all plugins
+  --enableplugin [plugin]
+                        enable plugins by name
+  --disableplugin [plugin]
+                        disable plugins by name
+  --releasever RELEASEVER
+                        override the value of $releasever in config and repo
+                        files
+  --setopt SETOPTS      set arbitrary config and repo options
+  --skip-broken         resolve depsolve problems by skipping packages
+  -h, --help, --help-cmd
+                        show command help
+  --allowerasing        allow erasing of installed packages to resolve
+                        dependencies
+  -b, --best            try the best available package versions in
+                        transactions.
+  --nobest              do not limit the transaction to the best candidate
+  -C, --cacheonly       run entirely from system cache, don't update cache
+  -R [minutes], --randomwait [minutes]
+                        maximum command wait time
+  -d [debug level], --debuglevel [debug level]
+                        debugging output level
+  --debugsolver         dumps detailed solving results into files
+  --showduplicates      show duplicates, in repos, in list/search commands
+  -e ERRORLEVEL, --errorlevel ERRORLEVEL
+                        error output level
+  --obsoletes           enables dnf's obsoletes processing logic for upgrade
+                        or display capabilities that the package obsoletes for
+                        info, list and repoquery
+  --rpmverbosity [debug level name]
+                        debugging output level for rpm
+  -y, --assumeyes       automatically answer yes for all questions
+  --assumeno            automatically answer no for all questions
+  --enablerepo [repo]   Enable additional repositories. List option. Supports
+                        globs, can be specified multiple times.
+  --disablerepo [repo]  Disable repositories. List option. Supports globs, can
+                        be specified multiple times.
+  --repo [repo], --repoid [repo]
+                        enable just specific repositories by an id or a glob,
+                        can be specified multiple times
+  --enable              enable repos with config-manager command
+                        (automatically saves)
+  --disable             disable repos with config-manager command
+                        (automatically saves)
+  -x [package], --exclude [package], --excludepkgs [package]
+                        exclude packages by name or glob
+  --disableexcludes [repo], --disableexcludepkgs [repo]
+                        disable excludepkgs
+  --repofrompath [repo,path]
+                        label and path to an additional repository to use
+                        (same path as in a baseurl), can be specified multiple
+                        times.
+  --noautoremove        disable removal of dependencies that are no longer
+                        used
+  --nogpgcheck          disable gpg signature checking (if RPM policy allows)
+  --color COLOR         control whether color is used
+  --refresh             set metadata as expired before running the command
+  -4                    resolve to IPv4 addresses only
+  -6                    resolve to IPv6 addresses only
+  --destdir DESTDIR, --downloaddir DESTDIR
+                        set directory to copy packages to
+  --downloadonly        only download packages
+  --comment COMMENT     add a comment to transaction
+  --bugfix              Include bugfix relevant packages, in updates
+  --enhancement         Include enhancement relevant packages, in updates
+  --newpackage          Include newpackage relevant packages, in updates
+  --security            Include security relevant packages, in updates
+  --advisory ADVISORY, --advisories ADVISORY
+                        Include packages needed to fix the given advisory, in
+                        updates
+  --bz BUGZILLA, --bzs BUGZILLA
+                        Include packages needed to fix the given BZ, in
+                        updates
+  --cve CVES, --cves CVES
+                        Include packages needed to fix the given CVE, in
+                        updates
+  --sec-severity {Critical,Important,Moderate,Low}, --secseverity {Critical,Important,Moderate,Low}
+                        Include security relevant packages matching the
+                        severity, in updates
+  --forcearch ARCH      Force the use of an architecture
