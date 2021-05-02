@@ -1,0 +1,177 @@
+
+cat  /proc/modules | grep -i watchdog
+lsmod | grep -i watchdog
+cat  /proc/modules | grep -i wdt
+lsmod | grep -i wdt
+
+==== ipmi_watchdog.ko
+
+modinfo ipmi_watchdog
+modprobe ipmi_watchdog
+ls /dev/watchdog
+
+-- /dev/watchdog available; in syslog
+IPMI Watchdog: driver initialized
+
+$ ipmitool mc watchdog help
+usage: watchdog <command>:
+   get    :  Get Current Watchdog settings
+   reset  :  Restart Watchdog timer based on most recent settings
+   off    :  Shut off a running Watchdog timer
+
+$ ipmitool mc watchdog get
+Watchdog Timer Use:     SMS/OS (0x44)
+Watchdog Timer Is:      Started/Running
+Watchdog Timer Actions: Hard Reset (0x01)
+Pre-timeout interval:   0 seconds
+Timer Expiration Flags: 0x00
+Initial Countdown:      900 sec
+Present Countdown:      716 sec
+
+==== bmc-watchdog.service
+
+$ cat /etc/sysconfig/bmc-watchdog
+#
+# This configuration file controls the behaviour of the bmc-watchdog daemon
+# from FreeIPMI.
+#
+#       -u INT, --timer-use=INT
+#              Set timer use.  The timer use value can be set  to  one  of  the
+#              following:  1  =  BIOS FRB2, 2 = BIOS POST, 3 = OS_LOAD, 4 = SMS
+#              OS, 5 = OEM.
+#
+#       -p INT, --pre-timeout-interrupt=INT
+#              Set pre-timeout interrupt.  The pre timeout interrupt can be set
+#              to one of the following: 0 = None, 1 = SMI, 2 = NMI, 3 = Messag-
+#              ing Interrupt.
+#
+#       -a INT, --timeout-action=INT
+#              Set timeout action.  The timeout action can be set to one of the
+#              following: 0 = No action, 1 = Hard Reset, 2 = Power  Down,  3  =
+#              Power Cycle.
+#
+#       -F, --clear-bios-frb2
+#              Clear  BIOS FRB2 Timer Use Flag.
+#
+#       -P, --clear-bios-post
+#              Clear BIOS POST Timer Use Flag.
+#
+#       -L, --clear-os-load
+#              Clear OS Load Timer Use Flag.
+#
+#       -S, --clear-sms-os
+#              Clear SMS/OS Timer Use Flag.
+#
+#       -O, --clear-oem
+#              Clear OEM Timer Use Flag.
+#
+#       -i SECS, --initial-countdown=SECS
+#              Set initial countdown in seconds.
+#
+#       -e, --reset-period
+#              Time interval to wait before resetting timer.  The default is 60
+#              seconds.
+#
+# For the remaining options, consult man bmc-watchdog
+#
+OPTIONS="-d -u 4 -p 0 -a 1 -F -P -L -S -O -i 900 -e 60"
+
+$ cat /lib64/systemd/system/bmc-watchdog.service
+[Unit]
+Description=BMC Watchdog Timer Daemon
+After=network.target
+
+[Service]
+Type=forking
+PIDFile=/run/bmc-watchdog.pid
+EnvironmentFile=-/etc/sysconfig/bmc-watchdog
+ExecStart=/usr/sbin/bmc-watchdog $OPTIONS
+
+[Install]
+WantedBy=multi-user.target
+
+$ bmc-watchdog
+Usage: bmc-watchdog <COMMAND> [OPTIONS]... [COMMAND_OPTIONS]...
+
+COMMANDS:
+  -s         --set                            Set BMC Watchdog Config.
+  -g         --get                            Get BMC Watchdog Config.
+  -r         --reset                          Reset BMC Watchdog Timer.
+  -t         --start                          Start BMC Watchdog Timer.
+  -y         --stop                           Stop BMC Watchdog Timer.
+  -c         --clear                          Clear BMC Watchdog Config.
+  -d         --daemon                         Run in Daemon Mode.
+
+OPTIONS:
+  -D IPMIDRIVER  --driver-type=IPMIDRIVER             Specify IPMI driver type.
+                 --disable-auto-probe                 Do not probe driver for default settings.
+                 --driver-address=DRIVER-ADDRESS      Specify driver address.
+                 --driver-device=DEVICE               Specify driver device path.
+                 --register-spacing=REGISTER-SPACING  Specify driver register spacing.
+                 --config-file=FILE                   Specify an alternate config file
+  -v             --verbose-logging                    Turn on verbose logging
+  -n             --no-logging                         Turn off all logging
+  -?             --help                               Output help menu.
+  -V             --version                            Output version.
+                 --debug                              Turn on debugging.
+$  bmc-watchdog -g
+Timer Use:                   SMS/OS
+Timer:                       Stopped
+Logging:                     Enabled
+Timeout Action:              None
+Pre-Timeout Interrupt:       None
+Pre-Timeout Interval:        0 seconds
+Timer Use BIOS FRB2 Flag:    Clear
+Timer Use BIOS POST Flag:    Clear
+Timer Use BIOS OS Load Flag: Clear
+Timer Use BIOS SMS/OS Flag:  Clear
+Timer Use BIOS OEM Flag:     Clear
+Initial Countdown:           10 seconds
+Current Countdown:           10 seconds
+
+==== Intel
+
+modinfo iTCO_wdt
+
+-- Succeed to load: /dev/watchdog available; in syslog
+NMI watchdog: Enabled. Permanently consumes one hw-PMU counter.
+iTCO_wdt: Intel TCO WatchDog Timer Driver v1.11
+iTCO_wdt: Found a Wellsburg TCO device (Version=2, TCOBASE=0x0460)
+iTCO_wdt: initialized. heartbeat=30 sec (nowayout=0)
+
+-- Fail to load: no /dev/watchdog; in syslog
+NMI watchdog: Enabled. Permanently consumes one hw-PMU counter.
+iTCO_wdt: Intel TCO WatchDog Timer Driver v1.11
+iTCO_wdt: unable to reset NO_REBOOT flag, device disabled by hardware/BIOS
+
+==== Work with watchdog
+
+Usually a userspace daemon will notify the kernel watchdog driver via the
+/dev/watchdog special device file that userspace is still alive, at
+regular intervals.
+
+wdfd = open("/dev/watchdog",O_WRONLY);
+int timeout = 900
+ioctl(wdfd, WDIOC_SETTIMEOUT, &timeout)
+
+ioctl(wdfd, WDIOC_KEEPALIVE, 0)
+
+WDIOC_KEEPALIVE
+WDIOC_SETTIMEOUT
+WDIOC_GETTIMEOUT
+WDIOC_GETTIMELEFT
+WDIOC_SETPRETIMEOUT
+WDIOC_GETPRETIMEOUT
+WDIOC_GETSUPPORT
+        identity                a string identifying the watchdog driver
+        firmware_version        the firmware version of the card if available
+        options                 a flags describing what the device supports
+WDIOC_GETSTATUS
+WDIOC_GETBOOTSTATUS
+WDIOC_GETTEMP
+WDIOC_SETOPTIONS
+
+
+==== Trigger watchdog
+
+cat >> /dev/watchdog
