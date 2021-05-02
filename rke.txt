@@ -1,0 +1,278 @@
+
+==== Rancher Kubernetes Engine
+https://rancher.com/docs/rke/latest/en/
+https://github.com/rancher/rke/releases/
+https://github.com/rancher/rke/releases/download/v1.1.15/rke_linux-amd64
+
+==== Deploy with rke
+
+# List system images:
+# By default, they will be pulled from DockerHub.
+# Can set up private_registries in cluster.yml for them to be pulled from there.
+$ ./rke config --system-images
+INFO[0000] Generating images list for version [v1.18.16-rancher1-1]: 
+rancher/coreos-etcd:v3.4.3-rancher1
+rancher/rke-tools:v0.1.72
+rancher/k8s-dns-kube-dns:1.15.2
+rancher/k8s-dns-dnsmasq-nanny:1.15.2
+rancher/k8s-dns-sidecar:1.15.2
+rancher/cluster-proportional-autoscaler:1.7.1
+rancher/coredns-coredns:1.6.9
+rancher/k8s-dns-node-cache:1.15.7
+rancher/hyperkube:v1.18.16-rancher1
+rancher/coreos-flannel:v0.12.0
+rancher/flannel-cni:v0.3.0-rancher6
+rancher/calico-node:v3.13.4
+rancher/calico-cni:v3.13.4
+rancher/calico-kube-controllers:v3.13.4
+rancher/calico-ctl:v3.13.4
+rancher/calico-pod2daemon-flexvol:v3.13.4
+weaveworks/weave-kube:2.6.4
+weaveworks/weave-npc:2.6.4
+rancher/pause:3.1
+rancher/nginx-ingress-controller:nginx-0.35.0-rancher2
+rancher/nginx-ingress-controller-defaultbackend:1.5-rancher1
+rancher/metrics-server:v0.3.6
+
+# Print configuration
+$ ../rke config --print
+[+] Cluster Level SSH Private Key Path [~/.ssh/id_rsa]: 
+[+] Number of Hosts [1]: 
+[+] SSH Address of host (1) [none]: 
+[+] SSH Port of host (1) [22]: 
+[+] SSH Private Key Path of host () [none]: 
+[-] You have entered empty SSH key path, trying fetch from SSH key parameter
+[+] SSH Private Key of host () [none]: 
+[-] You have entered empty SSH key, defaulting to cluster level SSH key: ~/.ssh/id_rsa
+[+] SSH User of host () [ubuntu]: 
+[+] Is host () a Control Plane host (y/n)? [y]: 
+[+] Is host () a Worker host (y/n)? [n]: 
+[+] Is host () an etcd host (y/n)? [n]: 
+[+] Override Hostname of host () [none]: 
+[+] Internal IP of host () [none]: 
+[+] Docker socket path on host () [/var/run/docker.sock]: 
+[+] Network Plugin Type (flannel, calico, weave, canal) [canal]: 
+[+] Authentication Strategy [x509]: 
+[+] Authorization Mode (rbac, none) [rbac]: 
+[+] Kubernetes Docker image [rancher/hyperkube:v1.18.16-rancher1]: 
+[+] Cluster domain [cluster.local]: 
+[+] Service Cluster IP Range [10.43.0.0/16]: 
+[+] Enable PodSecurityPolicy [n]: 
+[+] Cluster Network CIDR [10.42.0.0/16]: 
+[+] Cluster DNS Service IP [10.43.0.10]: 
+[+] Add addon manifest URLs or YAML files [no]: 
+Configuration File: 
+
+# Create cluster.yml file
+$ cat cluster.yml 
+nodes:
+- address: 1.1.1.1
+  internal_address: 1.1.1.1
+  hostname_override: my-control-plane
+  role:
+  - controlplane
+  - etcd
+  - worker
+  user: root
+- address: 1.1.1.2
+  internal_address: 1.1.1.2
+  hostname_override: my-worker01
+  role:
+  - worker
+  user: root
+- address: 1.1.1.3
+  internal_address: 1.1.1.3
+  hostname_override: my-worker02
+  role:
+  - worker
+  user: root
+network:
+  plugin: flannel
+
+# Run rke up: will also generate kube_config_cluster.yml and cluster.rkestate
+$ ./rke up
+
+# Set up env KUBECONFIG
+$ export KUBECONFIG=kube_config_cluster.yml
+
+# Check the cluster
+$ kubectl get nodes -o wide
+$ kubectl get componentstatus -o wide
+$ kubectl get pods -A -o wide
+$ kubectl get namespaces -o wide
+$ kubectl get endpoints -o wide
+$ kubectl get secrets -o wide
+$ kubectl get serviceaccounts -o wide
+$ kubectl get services -A  -o wide
+NAMESPACE       NAME                   TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)                  AGE   SELECTOR
+default         kubernetes             ClusterIP   10.43.0.1       <none>        443/TCP                  15h   <none>
+ingress-nginx   default-http-backend   ClusterIP   10.43.75.210    <none>        80/TCP                   15h   app=default-http-backend
+kube-system     kube-dns               ClusterIP   10.43.0.10      <none>        53/UDP,53/TCP,9153/TCP   15h   k8s-app=kube-dns
+kube-system     metrics-server         ClusterIP   10.43.240.169   <none>        443/TCP                  15h   k8s-app=metrics-server
+
+# On control plane and etcd node
+$ docker images
+REPOSITORY                         TAG                     IMAGE ID            CREATED             SIZE
+rancher/rke-tools                  v0.1.72                 9227cf8d7365        3 weeks ago         193MB
+rancher/hyperkube                  v1.18.16-rancher1       27b4a473a16e        4 weeks ago         1.74GB
+rancher/nginx-ingress-controller   nginx-0.35.0-rancher2   1f0ca6d99110        5 months ago        322MB
+rancher/flannel-cni                v0.3.0-rancher6         204d7aaf689a        9 months ago        58.2MB
+rancher/coredns-coredns            1.6.9                   4e797b323460        12 months ago       43.2MB
+rancher/coreos-flannel             v0.12.0                 4e9f801d2217        12 months ago       52.8MB
+rancher/coreos-etcd                v3.4.3-rancher1         a0b920cf970d        17 months ago       83.6MB
+rancher/pause                      3.1                     da86e6ba6ca1        3 years ago         742kB
+
+# On worker node
+$ docker images
+REPOSITORY                                        TAG                     IMAGE ID            CREATED             SIZE
+rancher/rke-tools                                 v0.1.72                 9227cf8d7365        3 weeks ago         193MB
+rancher/hyperkube                                 v1.18.16-rancher1       27b4a473a16e        4 weeks ago         1.74GB
+rancher/nginx-ingress-controller                  nginx-0.35.0-rancher2   1f0ca6d99110        5 months ago        322MB
+rancher/flannel-cni                               v0.3.0-rancher6         204d7aaf689a        10 months ago       58.2MB
+rancher/coredns-coredns                           1.6.9                   4e797b323460        12 months ago       43.2MB
+rancher/coreos-flannel                            v0.12.0                 4e9f801d2217        12 months ago       52.8MB
+rancher/metrics-server                            v0.3.6                  9dd718864ce6        17 months ago       39.9MB
+rancher/cluster-proportional-autoscaler           1.7.1                   14afc47fd5af        19 months ago       40.1MB
+rancher/nginx-ingress-controller-defaultbackend   1.5-rancher1            b5af743e5984        2 years ago         5.13MB
+rancher/pause                                     3.1                     da86e6ba6ca1        3 years ago         742kB
+
+==== Add/remove nodes
+
+# Update cluster.yml, then: rke up
+# Adding/Removing Worker Nodes: rke up --update-only
+
+
+==== k8s dashboard: https://github.com/kubernetes/dashboard
+
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.2.0/aio/deploy/recommended.yaml
+kubectl proxy
+
+http://localhost:8001/api/v1/namespaces/kubernetes-dashboard/services/https:kubernetes-dashboard:/proxy/
+# Find the token for accessing the dashboard
+kubectl get secrets -o wide
+kubectl describe secret <secret_name>
+
+==== rke commands
+
+$ ./rke --help
+NAME:
+   rke - Rancher Kubernetes Engine, an extremely simple, lightning fast Kubernetes installer that works everywhere
+
+USAGE:
+   rke [global options] command [command options] [arguments...]
+
+VERSION:
+   v1.1.15
+
+AUTHOR:
+   Rancher Labs, Inc.
+
+COMMANDS:
+     up       Bring the cluster up
+     remove   Teardown the cluster and clean cluster nodes
+     version  Show cluster Kubernetes version
+     config   Setup cluster configuration
+     etcd     etcd snapshot save/restore operations in k8s cluster
+     cert     Certificates management for RKE cluster
+     encrypt  Manage cluster encryption provider keys
+     help, h  Shows a list of commands or help for one command
+
+GLOBAL OPTIONS:
+   --debug, -d    Debug logging
+   --quiet, -q    Quiet mode, disables logging and only critical output will be printed
+   --trace        Trace logging
+   --help, -h     show help
+   --version, -v  print the version
+
+$ ./rke up --help
+NAME:
+   rke up - Bring the cluster up
+
+USAGE:
+   rke up [command options] [arguments...]
+
+OPTIONS:
+   --config value               Specify an alternate cluster YAML file (default: "cluster.yml") [$RKE_CONFIG]
+   --local                      Deploy Kubernetes cluster locally
+   --dind                       Deploy Kubernetes cluster in docker containers (experimental)
+   --dind-storage-driver value  Storage driver for the docker in docker containers (experimental)
+   --dind-dns-server value      DNS resolver to be used by docker in docker container. Useful if host is running systemd-resovld (default: "8.8.8.8")
+   --update-only                Skip idempotent deployment of control and etcd plane
+   --disable-port-check         Disable port check validation between nodes
+   --init                       Initiate RKE cluster
+   --cert-dir value             Specify a certificate dir path
+   --custom-certs               Use custom certificates from a cert dir
+   --ssh-agent-auth             Use SSH Agent Auth defined by SSH_AUTH_SOCK
+   --ignore-docker-version      Disable Docker version check
+
+$ ./rke remove --help
+NAME:
+   rke remove - Teardown the cluster and clean cluster nodes
+
+USAGE:
+   rke remove [command options] [arguments...]
+
+OPTIONS:
+   --config value           Specify an alternate cluster YAML file (default: "cluster.yml") [$RKE_CONFIG]
+   --force                  Force removal of the cluster
+   --local                  Remove Kubernetes cluster locally
+   --dind                   Remove Kubernetes cluster deployed in dind mode
+   --ssh-agent-auth         Use SSH Agent Auth defined by SSH_AUTH_SOCK
+   --ignore-docker-version  Disable Docker version check
+
+$ ./rke config --help
+NAME:
+   rke config - Setup cluster configuration
+
+USAGE:
+   rke config [command options] [arguments...]
+
+OPTIONS:
+   --name value, -n value  Name of the configuration file (default: "cluster.yml")
+   --empty, -e             Generate Empty configuration file
+   --print, -p             Print configuration
+   --system-images, -s     Generate the default system images
+   --list-version, -l      List the default kubernetes version
+   --all, -a               Used with -s and -l, get all available versions
+   --version value         Generate the default system images for specific k8s versions
+   
+$ ./rke etcd --help
+NAME:
+   rke etcd - etcd snapshot save/restore operations in k8s cluster
+
+USAGE:
+   rke etcd command [command options] [arguments...]
+
+COMMANDS:
+     snapshot-save     Take snapshot on all etcd hosts
+     snapshot-restore  Restore existing snapshot
+
+OPTIONS:
+   --help, -h  show help
+
+$ ./rke cert --help
+NAME:
+   rke cert - Certificates management for RKE cluster
+
+USAGE:
+   rke cert command [command options] [arguments...]
+
+COMMANDS:
+     rotate        Rotate RKE cluster certificates
+     generate-csr  Generate certificate sign requests for k8s components
+
+OPTIONS:
+   --help, -h  show help
+
+$ ./rke encrypt --help
+NAME:
+   rke encrypt - Manage cluster encryption provider keys
+
+USAGE:
+   rke encrypt command [command options] [arguments...]
+
+COMMANDS:
+     rotate-key  Rotate cluster encryption provider key
+
+OPTIONS:
+   --help, -h  show help
