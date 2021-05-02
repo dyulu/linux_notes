@@ -24,6 +24,20 @@ Create a new token and join command to rejoin/add worker node
   systemctl status kubelet
   kubeadm token generate    # record generated token as <tokenname>
   kubeadm token create <tokenname> --print-join-command
+List tokens:
+  kubeadm token list
+  
+==== Remove node
+# Control plane node
+kubectl drain <node name> --delete-local-data --force --ignore-daemonsets
+# Node
+kubeadm reset
+# Clean up iptables rules
+iptables -F && iptables -t nat -F && iptables -t mangle -F && iptables -X
+# If reset IPVS tables
+ipvsadm -C
+# Control plane node
+kubectl delete node <node name>
 
 ==== Imperative commands:
 Create objects:
