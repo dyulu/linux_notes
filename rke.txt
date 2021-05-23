@@ -88,6 +88,15 @@ nodes:
   user: root
 network:
   plugin: flannel
+  
+# Open port 6443 on k8s master node:
+iptables -I INPUT -p tcp --dport 6443 -j ACCEPT
+
+# On all k8s nodes, make sure docker is running and can pull images
+
+# On host running rke:
+# Set up passwordless ssh access to all k8s nodes: ssh-copy-id root@node_ip
+# Add k8s master node IP to NO_PROXY and no_proxy environment variables. CIDR form does not work.
 
 # Run rke up: will also generate kube_config_cluster.yml and cluster.rkestate
 $ ./rke up
