@@ -238,3 +238,23 @@ Available applications:
   Apache Full
   Apache Secure
   OpenSSH
+
+==== exportfs options
+
+secure:    on by default; use insecure to turn it off; requires requests to originate from port < IPPORT_RESERVED (1024).
+rw:        allow both read and write to the NFS volume.
+async:     allows NFS server to violate NFS protocol and reply to requests before any changes made by that request have been committed to stable storage.
+sync:      default after nfs-utils 1.0.0.
+no_wdelay: in sync mode, delay commiting writes to disk in anticipating more writes.
+no_subtree_check: has mild security implications, but can improve reliability in some circumstances.
+                  If a subdirectory of a filesystem is exported, but the whole filesystem isn't then whenever a NFS request arrives, the server must check
+                  not only that the accessed file is in the appropriate filesystem (which is easy) but also that it is in the exported tree (which is
+                  harder). This check is called the subtree_check.
+mountpoint=/path or mp=/path: makes it possible to only export a directory if it has successfully been mounted.
+                  If no path is given (e.g. mountpoint or mp) then the export point must also be a mount point.
+                  allows you to be sure that the directory underneath a mountpoint will never be exported by accident.
+fsid=num|root|uuid: if filesystem is not stored on device or does not have a UUID, use fsid to tell NFS how to identify a filesystem; 0 to 255.
+                    For NFSv4, there is a distinguished filesystem which is the root of all exported filesystem. This is specified with fsid=root or fsid=0.
+root_squash:    map root UID/GID to anonymous UID/GID (nobody/nogroup); this is the default
+all_squash:     map all UIDs/GIDs to anonymous UID/GID (nobody/nogroup)
+no_root_squash: do not map root (nor any other) UID/GID to anonymous UID/GID (nobody/nogroup)
