@@ -258,3 +258,25 @@ fsid=num|root|uuid: if filesystem is not stored on device or does not have a UUI
 root_squash:    map root UID/GID to anonymous UID/GID (nobody/nogroup); this is the default
 all_squash:     map all UIDs/GIDs to anonymous UID/GID (nobody/nogroup)
 no_root_squash: do not map root (nor any other) UID/GID to anonymous UID/GID (nobody/nogroup)
+
+==== nfsstat
+
+-s: Print only server-side statistics. The default is to print both server and client statistics.
+-c: Print only client-side statistics.
+
+-n: Print only NFS statistics. The default is to print both NFS and RPC information.
+-r: Print only RPC statistics.
+
+-m: Print information about each of the mounted NFS file systems. If this option is used, all other options are ignored.
+
+==== On server: is nfs server running
+
+systemctl status nfs-kernel-server     # service nfs-kernel-server status
+systemctl status portmap               # service portmap status, for NFSv3 and older
+systemctl status nfs-mountd            # service nfs-mountd status
+
+==== On client: is nfs server running
+
+telnet ip_of_nfs_server 2049    (exit with Ctrl + c)
+nc -z ip_of_nfs_server 2049     (-u: UDP, -z: to check for listening daemons without sending data)
+
