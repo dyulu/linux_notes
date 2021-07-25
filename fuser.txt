@@ -1,0 +1,47 @@
+
+apt-get update
+apt-get install psmisc
+
+# Find Which Process Accessing a Directory or a file/filesystem
+fuser dir_name       # Print the PIDs of the processes currently accessing dir_name
+fuser -v dir_name    # -v: verbose;  the process owner (USER), process ID (PID), the access type (ACCESS) and command (COMMAND)
+                     # Under the ACCESS column, see access types signified by the following letters:
+                     #   c – current directory
+                     #   e – an executable file being run
+                     #   f – open file, however, f is left out in the output
+                     #   F – open file for writing, F is as well excluded from the output
+                     #   r – root directory
+                     #   m – mmap’ed file or shared library
+fuser -v -m file_name    # -m or --mount
+fuser -v -m dir_name
+
+# Kill and Signal Processes
+fuser -k dir_name/file_name    # -k, --kill, send SIGKILL
+fuser -ki dir_name/file_name   # -i, --interactive
+fuser -l                       # -l, ----list-signals: list all the signals that can be sent using -SIGNAL option
+fuser -k -HUP dir_name         # e.g., to send HUP signal
+fuser -i -k 123/tcp            # kill the process which is using the tcp listener running on port 123
+
+# Identify process using a TCP socket:
+fuser -n tcp port#
+
+# fuser show which processes use the named files, sockets, or filesystems.
+  -a,--all              display unused files too
+  -i,--interactive      ask before killing (ignored without -k)
+  -k,--kill             kill processes accessing the named file
+  -l,--list-signals     list available signal names
+  -m,--mount            show all processes using the named filesystems or block device
+  -M,--ismountpoint     fulfill request only if NAME is a mount point
+  -n,--namespace SPACE  search in this name space (file, udp, or tcp)
+  -s,--silent           silent operation
+  -SIGNAL               send this signal instead of SIGKILL
+  -u,--user             display user IDs
+  -v,--verbose          verbose output
+  -w,--writeonly        kill only processes with write access
+  -V,--version          display version information
+  -4,--ipv4             search IPv4 sockets only
+  -6,--ipv6             search IPv6 sockets only
+  -                     reset options
+
+  udp/tcp names: [local_port][,[rmt_host][,[rmt_port]]]
+  
