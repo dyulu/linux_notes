@@ -1,0 +1,198 @@
+==== https://minikube.sigs.k8s.io/docs/start/
+
+curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+sudo install minikube-linux-amd64 /usr/local/bin/minikube
+
+minikube start --driver=docker
+minikube start --driver=virtualbox
+minikube status
+kubectl cluster-info     # show the cluster information
+kubectl get nodes -o wide
+kubectl get pod
+
+minikube pause
+minikube stop
+minikube delete --all    # delete the cluster
+
+minikube addons list     # see a list of installed Minikube add-ons
+
+minikube dashboard       # enable and access the Minikube dashboard via terminal
+minikube dashboard --url # acquire the dashboard’s IP and access via browser
+
+minikube ssh             # ssh into Minikube VM
+
+====
+
+lsb_release -a     # Ubuntu 18.04.3 LTS
+
+Install Docker:
+  sudo apt-get update
+  sudo apt-get install docker.io
+  docker --version
+Enable and start Docker
+  sudo systemctl enable docker
+  sudo systemctl start docker
+Install VirtualBox
+  sudo apt install virtualbox virtualbox-ext-pack
+Install Minikube
+  curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+  chmod 755 minikube-linux-amd64
+  sudo install minikube-linux-amd64 /usr/local/bin/minikube
+  minikube version
+Install Kubectl
+  curl -LO https://storage.googleapis.com/kubernetes-release/release/`curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt`/bin/linux/amd64/kubectl
+  chmod 755 kubectl
+  sudo install kubectl /usr/local/bin/kubectl
+  kubectl version -o json
+
+====
+
+# lscpu
+......
+Virtualization: VT-x
+......
+
+root@MyVM:~# minikube start
+😄  minikube v1.22.0 on Ubuntu 18.04 (vbox/amd64)
+✨  Automatically selected the docker driver. Other choices: virtualbox, none, ssh
+🛑  The "docker" driver should not be used with root privileges.
+💡  If you are running minikube within a VM, consider using --driver=none:
+📘    https://minikube.sigs.k8s.io/docs/reference/drivers/none/
+
+❌  Exiting due to DRV_AS_ROOT: The "docker" driver should not be used with root privileges.
+
+root@MyVM:~# minikube start --driver=virtualbox
+😄  minikube v1.22.0 on Ubuntu 18.04 (vbox/amd64)
+✨  Using the virtualbox driver based on user configuration
+🛑  The "virtualbox" driver should not be used with root privileges.
+💡  If you are running minikube within a VM, consider using --driver=none:
+📘    https://minikube.sigs.k8s.io/docs/reference/drivers/none/
+
+❌  Exiting due to DRV_AS_ROOT: The "virtualbox" driver should not be used with root privileges.
+
+root@MyVM:~# minikube start --driver=none      
+😄  minikube v1.22.0 on Ubuntu 18.04 (vbox/amd64)
+✨  Using the none driver based on user configuration
+
+❌  Exiting due to GUEST_MISSING_CONNTRACK: Sorry, Kubernetes 1.21.2 requires conntrack to be installed in root's path
+
+root@MyVM:~# sudo apt-get install -y conntrack
+
+root@MyVM:~# minikube start --driver=none
+😄  minikube v1.22.0 on Ubuntu 18.04 (vbox/amd64)
+✨  Using the none driver based on user configuration
+👍  Starting control plane node minikube in cluster minikube
+🤹  Running on localhost (CPUs=2, Memory=7976MB, Disk=39553MB) ...
+ℹ️  OS release is Ubuntu 18.04.3 LTS
+🐳  Preparing Kubernetes v1.21.2 on Docker 20.10.2 ...
+    ▪ kubelet.resolv-conf=/run/systemd/resolve/resolv.conf
+    > kubectl.sha256: 64 B / 64 B [--------------------------] 100.00% ? p/s 0s
+    > kubelet.sha256: 64 B / 64 B [--------------------------] 100.00% ? p/s 0s
+    > kubeadm.sha256: 64 B / 64 B [--------------------------] 100.00% ? p/s 0s
+    > kubectl: 44.27 MiB / 44.27 MiB [------------] 100.00% 60.43 MiB p/s 900ms
+    > kubeadm: 42.57 MiB / 42.57 MiB [------------] 100.00% 59.04 MiB p/s 900ms
+    > kubelet: 112.68 MiB / 112.68 MiB [-----------] 100.00% 64.53 MiB p/s 2.0s
+    ▪ Generating certificates and keys ...
+    ▪ Booting up control plane ...
+    ▪ Configuring RBAC rules ...
+🤹  Configuring local host environment ...
+
+❗  The 'none' driver is designed for experts who need to integrate with an existing VM
+💡  Most users should use the newer 'docker' driver instead, which does not require root!
+📘  For more information, see: https://minikube.sigs.k8s.io/docs/reference/drivers/none/
+
+❗  kubectl and minikube configuration will be stored in /root
+❗  To use kubectl or minikube commands as your own user, you may need to relocate them. For example, to overwrite your own settings, run:
+
+    ▪ sudo mv /root/.kube /root/.minikube $HOME
+    ▪ sudo chown -R $USER $HOME/.kube $HOME/.minikube
+
+💡  This can also be done automatically by setting the env var CHANGE_MINIKUBE_NONE_USER=true
+🔎  Verifying Kubernetes components...
+    ▪ Using image gcr.io/k8s-minikube/storage-provisioner:v5
+🌟  Enabled addons: storage-provisioner, default-storageclass
+🏄  Done! kubectl is now configured to use "minikube" cluster and "default" namespace by default
+
+root@MyVM:~# minikube status
+minikube
+type: Control Plane
+host: Running
+kubelet: Running
+apiserver: Running
+kubeconfig: Configured
+
+root@MyVM:~# kubectl cluster-info
+Kubernetes control plane is running at https://10.193.114.235:8443
+CoreDNS is running at https://10.193.114.235:8443/api/v1/namespaces/kube-system/services/kube-dns:dns/proxy
+
+To further debug and diagnose cluster problems, use 'kubectl cluster-info dump'.
+root@MyVM:~# kubectl get nodes -o wide
+NAME              STATUS   ROLES                  AGE   VERSION   INTERNAL-IP      EXTERNAL-IP   OS-IMAGE             KERNEL-VERSION      CONTAINER-RUNTIME
+MyVM   Ready    control-plane,master   10m   v1.21.2   10.193.114.235   <none>        Ubuntu 18.04.3 LTS   4.15.0-58-generic   docker://20.10.2
+root@MyVM:~# kubectl get pod
+No resources found in default namespace.
+root@MyVM:~# kubectl get pod -A
+NAMESPACE              NAME                                         READY   STATUS             RESTARTS   AGE
+kube-system            coredns-558bd4d5db-t8m78                     1/1     Running            0          25m
+kube-system            etcd-MyVM                         1/1     Running            0          25m
+kube-system            kube-apiserver-MyVM               1/1     Running            0          25m
+kube-system            kube-controller-manager-MyVM      1/1     Running            0          25m
+kube-system            kube-proxy-jhj8j                             1/1     Running            0          25m
+kube-system            kube-scheduler-MyVM               1/1     Running            0          25m
+kube-system            storage-provisioner                          1/1     Running            0          25m
+
+==== Push docker images to minikube cluster using register addon
+
+minikube addons enable registry
+docker build --tag $(minikube ip):5000/my_image .
+docker push $(minikube ip):5000/my_image
+
+==== Load docker images to minikube cluster directly
+
+minikube image load my_image
+
+==== Build docker images to minikube cluster directly
+
+minikube image build -t my_image .
+
+==== Build docker images inside of minikube using ssh
+
+minikube ssh
+docker build -t my_image .
+
+==== Push to in-cluster docker daemon
+
+eval $(minikube docker-env)
+docker build -t my_image .
+
+==== minikube image
+
+# minikube image 
+Manage images
+
+Available Commands:
+  build       Build a container image in minikube
+  load        Load a image into minikube
+  ls          List images
+  rm          Remove one or more images
+
+==== Running minikube as a non-root user
+
+# Add new user
+adduser miniuser
+usermod -aG sudo miniuser              # -aG: Add the user to the supplementary group
+
+# Login to the newly created user
+su - miniuser
+
+# Add user to the Docker group
+sudo groupadd docker
+sudo usermod -aG docker $USER
+
+# Relogin or restart the server
+
+# Start minikube with Docker driver
+minikube start --driver=docker
+
+# Verify minikube installation
+docker ps
