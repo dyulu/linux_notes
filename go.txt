@@ -1,0 +1,212 @@
+
+==== go version 1.15.12
+$ wget -c https://golang.org/dl/go1.15.12.linux-amd64.tar.gz -O - | sudo tar -xz -C /usr/local
+$ export PATH=$PATH:/usr/local/go/bin
+$ go version
+go version go1.15.12 linux/amd64
+$ go env
+GO111MODULE=""
+GOARCH="amd64"
+GOBIN=""
+GOCACHE="/root/.cache/go-build"
+GOENV="/root/.config/go/env"
+GOEXE=""
+GOFLAGS=""
+GOHOSTARCH="amd64"
+GOHOSTOS="linux"
+GOINSECURE=""
+GOMODCACHE="/root/go/pkg/mod"
+GONOPROXY=""
+GONOSUMDB=""
+GOOS="linux"
+GOPATH="/root/go"
+GOPRIVATE=""
+GOPROXY="https://proxy.golang.org,direct"
+GOROOT="/usr/local/go"
+GOSUMDB="sum.golang.org"
+GOTMPDIR=""
+GOTOOLDIR="/usr/local/go/pkg/tool/linux_amd64"
+GCCGO="gccgo"
+AR="ar"
+CC="gcc"
+CXX="g++"
+CGO_ENABLED="1"
+GOMOD=""
+CGO_CFLAGS="-g -O2"
+CGO_CPPFLAGS=""
+CGO_CXXFLAGS="-g -O2"
+CGO_FFLAGS="-g -O2"
+CGO_LDFLAGS="-g -O2"
+PKG_CONFIG="pkg-config"
+GOGCCFLAGS="-fPIC -m64 -pthread -fno-caret-diagnostics -Qunused-arguments -fmessage-length=0 -fdebug-prefix-map=/tmp/go-build860659922=/tmp/go-build -gno-record-gcc-switches"
+
+==== sigs.k8s.io/kustomize/kustomize, GOPATH mode
+
+$ ~/go# ls
+$ ~/go# go get -d sigs.k8s.io/kustomize/kustomize/v3@v3.8.7
+go: cannot use path@version syntax in GOPATH mode
+$ ~/go# go get -d sigs.k8s.io/kustomize/kustomize               # apt-get install git
+$ ~/go# tree
+......
+1655 directories, 15369 files
+$ ~/go# ls
+src
+$ ~/go# ls src/
+github.com/      golang.org/      gopkg.in/        go.starlark.net/ k8s.io/          sigs.k8s.io/ 
+$ ~/go# ls src/sigs.k8s.io/kustomize/
+api  code-of-conduct.md  docs      functions  kustomize             kyaml    Makefile  OWNERS_ALIASES  README.md  scripts            site
+cmd  CONTRIBUTING.md     examples  hack       kustomize.Dockerfile  LICENSE  OWNERS    plugin          releasing  SECURITY_CONTACTS
+$ ~/go# go install sigs.k8s.io/kustomize/kustomize              # apt-get install build-essential (gcc is required to build)
+$ ~/go# ls
+bin  src
+$ ~/go# ls bin                                                  # go install: build and install the binary kustomize
+kustomize
+$ ~/go# tree
+......
+1656 directories, 15370 files
+$ ~/go# bin/kustomize 
+
+Manages declarative configuration of Kubernetes.
+See https://sigs.k8s.io/kustomize
+
+Usage:
+  kustomize [command]
+
+Available Commands:
+  build                     Build a kustomization target from a directory or URL.
+  cfg                       Commands for reading and writing configuration.
+  completion                Generate shell completion script
+  create                    Create a new kustomization in the current directory
+  edit                      Edits a kustomization file
+  fn                        Commands for running functions against configuration.
+  help                      Help about any command
+  version                   Prints the kustomize version
+
+Flags:
+  -h, --help          help for kustomize
+      --stack-trace   print a stack-trace on error
+
+Additional help topics:
+  kustomize docs-fn                   [Alpha] Documentation for developing and invoking Configuration Functions.
+  kustomize docs-fn-spec              [Alpha] Documentation for Configuration Functions Specification.
+  kustomize docs-io-annotations       [Alpha] Documentation for annotations used by io.
+  kustomize docs-merge                [Alpha] Documentation for merging Resources (2-way merge).
+  kustomize docs-merge3               [Alpha] Documentation for merging Resources (3-way merge).
+  kustomize tutorials-command-basics  [Alpha] Tutorials for using basic config commands.
+  kustomize tutorials-function-basics [Alpha] Tutorials for using functions.
+
+Use "kustomize [command] --help" for more information about a command.
+
+==== sigs.k8s.io/kustomize/kustomize, module aware mode
+
+$ ~/go# export GO111MODULE=on
+$ ~/go# ls
+$ ~/go# go get -d sigs.k8s.io/kustomize/kustomize/v3@v3.8.7
+go: downloading sigs.k8s.io/kustomize/kustomize/v3 v3.8.7
+go: downloading k8s.io/client-go v0.18.10
+go: downloading sigs.k8s.io/kustomize/api v0.6.5
+go: downloading sigs.k8s.io/yaml v1.2.0
+go: downloading github.com/pkg/errors v0.9.1
+go: downloading github.com/spf13/cobra v1.0.0
+go: downloading gopkg.in/yaml.v2 v2.3.0
+go: downloading github.com/spf13/pflag v1.0.5
+go: downloading k8s.io/apimachinery v0.18.10
+go: downloading github.com/inconshreveable/mousetrap v1.0.0
+go: downloading sigs.k8s.io/kustomize/kyaml v0.9.4
+go: downloading github.com/evanphx/json-patch v4.9.0+incompatible
+go: downloading github.com/yujunz/go-getter v1.4.1-lite
+go: downloading github.com/mitchellh/go-testing-interface v1.0.0
+go: downloading github.com/hashicorp/go-version v1.1.0
+go: downloading sigs.k8s.io/kustomize/cmd/config v0.8.5
+go: downloading github.com/hashicorp/go-multierror v1.1.0
+go: downloading github.com/gogo/protobuf v1.3.1
+go: downloading github.com/hashicorp/go-safetemp v1.0.0
+go: downloading gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c
+go: downloading github.com/monochromegane/go-gitignore v0.0.0-20200626010858-205db1a8cc00
+go: downloading sigs.k8s.io/structured-merge-diff v0.0.0-20190525122527-15d366b2352e
+go: downloading github.com/hashicorp/errwrap v1.0.0
+go: downloading github.com/go-errors/errors v1.0.1
+go: downloading github.com/davecgh/go-spew v1.1.1
+go: downloading github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
+go: downloading github.com/google/gofuzz v1.1.0
+go: downloading github.com/go-openapi/spec v0.19.5
+go: downloading sigs.k8s.io/structured-merge-diff/v3 v3.0.0
+go: downloading github.com/ulikunitz/xz v0.5.5
+go: downloading github.com/xlab/treeprint v0.0.0-20181112141820-a009c3971eca
+go: downloading k8s.io/kube-openapi v0.0.0-20200410145947-61e04a5be9a6
+go: downloading k8s.io/api v0.18.10
+go: downloading github.com/hashicorp/go-cleanhttp v0.5.0
+go: downloading github.com/bgentry/go-netrc v0.0.0-20140422174119-9fd32a8b3d3d
+go: downloading golang.org/x/net v0.0.0-20200625001655-4c5254603344
+go: downloading github.com/stretchr/testify v1.6.1
+go: downloading github.com/go-openapi/jsonpointer v0.19.3
+go: downloading k8s.io/klog v1.0.0
+go: downloading github.com/pmezard/go-difflib v1.0.0
+go: downloading github.com/go-openapi/swag v0.19.5
+go: downloading gopkg.in/inf.v0 v0.9.1
+go: downloading github.com/go-openapi/jsonreference v0.19.3
+go: downloading github.com/gophercloud/gophercloud v0.1.0
+go: downloading github.com/mitchellh/go-homedir v1.1.0
+go: downloading github.com/googleapis/gnostic v0.1.0
+go: downloading github.com/mailru/easyjson v0.7.0
+go: downloading golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
+go: downloading go.starlark.net v0.0.0-20200306205701-8dd3e2ee1dd5
+go: downloading github.com/olekukonko/tablewriter v0.0.4
+go: downloading github.com/Azure/go-autorest/autorest v0.9.0
+go: downloading github.com/qri-io/starlib v0.4.2-0.20200213133954-ff2e8cd5ef8d
+go: downloading github.com/golang/protobuf v1.3.2
+go: downloading github.com/go-openapi/validate v0.19.8
+go: downloading github.com/emicklei/go-restful v0.0.0-20170410110728-ff4f55a20633
+go: downloading github.com/PuerkitoBio/purell v1.1.1
+go: downloading golang.org/x/time v0.0.0-20190308202827-9d24e82272b4
+go: downloading github.com/modern-go/reflect2 v1.0.1
+go: downloading github.com/mattn/go-runewidth v0.0.7
+go: downloading github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578
+go: downloading golang.org/x/text v0.3.2
+go: downloading github.com/Azure/go-autorest/tracing v0.5.0
+go: downloading github.com/go-openapi/strfmt v0.19.5
+go: downloading github.com/Azure/go-autorest/autorest/adal v0.5.0
+go: downloading google.golang.org/appengine v1.5.0
+go: downloading k8s.io/utils v0.0.0-20200324210504-a9aa75ae1b89
+go: downloading github.com/json-iterator/go v1.1.8
+go: downloading github.com/Azure/go-autorest/logger v0.1.0
+go: downloading golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
+go: downloading go.mongodb.org/mongo-driver v1.1.2
+go: downloading github.com/mitchellh/mapstructure v1.1.2
+go: downloading github.com/go-openapi/errors v0.19.2
+go: downloading github.com/dgrijalva/jwt-go v3.2.0+incompatible
+go: downloading github.com/asaskevich/govalidator v0.0.0-20190424111038-f61b66f89f4a
+go: downloading cloud.google.com/go v0.38.0
+go: downloading github.com/go-openapi/loads v0.19.4
+go: downloading github.com/go-openapi/runtime v0.19.4
+go: downloading golang.org/x/sys v0.0.0-20200323222414-85ca7c5b95cd
+go: downloading github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd
+go: downloading github.com/go-openapi/analysis v0.19.5
+go: downloading github.com/Azure/go-autorest/autorest/date v0.1.0
+go: downloading github.com/go-stack/stack v1.8.0
+$ ~/go# ls
+pkg
+$ ~/go# ls pkg/                                   # export GOSUMDB=off: will not download sumdb
+mod  sumdb
+$ ~/go# ls pkg/mod/
+cache             github.com  go.mongodb.org     gopkg.in                                            k8s.io
+cloud.google.com  golang.org  google.golang.org  go.starlark.net@v0.0.0-20200306205701-8dd3e2ee1dd5  sigs.k8s.io
+$ ~/go# ls pkg/mod/sigs.k8s.io/
+kustomize  structured-merge-diff  structured-merge-diff@v0.0.0-20190525122527-15d366b2352e  yaml@v1.2.0
+$ ~/go# tree
+......
+3678 directories, 16001 files
+$ ~/go# go install sigs.k8s.io/kustomize/kustomize/v3@v3.8.7
+package sigs.k8s.io/kustomize/kustomize/v3@v3.8.7: can only use path@version syntax with 'go get'
+$ ~/go# go install sigs.k8s.io/kustomize/kustomize
+cannot find module providing package sigs.k8s.io/kustomize/kustomize: working directory is not part of a module
+$ ~/go/pkg/mod/sigs.k8s.io/kustomize/kustomize/v3@v3.8.7# ls
+fixgomod.sh  go.mod  go.sum  internal  LICENSE  main.go
+$ ~/go/pkg/mod/sigs.k8s.io/kustomize/kustomize/v3@v3.8.7# go install
+$ ~/go# ls
+bin  pkg
+$ ~/go# ls bin
+kustomize
+$ ~/go# tree
+......
+3679 directories, 16080 files
