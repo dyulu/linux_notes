@@ -67,6 +67,15 @@ ipmitool -S cached_sdr_file sel elist: speed up sel elist command by using Senso
 user summary:
 user list:
 
+==== Enable user 3
+
+ipmitool user list
+ipmitool user set name 3 root
+ipmitool user set password 3 covid19
+ipmitool channel setaccess 1 3 link=on ipmi=on callin=on privilege=4
+ipmitool user enable 3
+ipmitool user list
+
 ==== ipmi_cmd list
 Commands:
 	raw           Send a RAW IPMI request and print response
