@@ -1,0 +1,52 @@
+nc: reads and writes data across network connections, using the TCP or UDP protocols
+
+nc [options] hostIP port
+
+# Port scan: scan ports without sending data using -z; -v for vebose
+nc -z -v hostIP 80       # scan port 80
+nc -z -v hostIP 20 80    # scan ports 20 and 80
+nc -z -v hostIP 20-80    # scan ports from 20 to 80
+nc -z -v -w 2 hostIP 80  # scan port 80; -w: timeout for connection
+nc -zvn smtp.host.example.com 25
+
+# Send files
+nc -l 5555 > save_to_file                           # On receiving side, listen to port 5555, redirect output to file
+nc -l -p 5555 > save_to_file                        # Same as above
+nc -lp 5555 > save_to_file                          # Same as above
+nc receiving_side_ip 5555 < read_from_file          # On sending side
+nc -l 5555 | tar xzvf -                             # On receiving side, pipe output to tar cmd to extract the archive
+tar czvf - path_to_dir | nc receiving_side_ip 5555  # On sending side. Ctrl + c to close the connection
+
+# Create a compressed backup of hard drive (e.g., /dev/sdc) on a remote host
+nc -lp 2424 | sudo dd of=path_to_image.img.gz       # On receiving side
+dd if=/dev/sdc | gzip -c | nc hostIP 2424   # On sending side
+
+# Restore a hard drive (e.g. /dev/sdc) from a compressed disk image stored in a remote host
+cat path_to_image.img.gz | nc hostIP 2424
+nc -lp 2424 | gunzip -c | sudo dd of=/dev/sdc
+
+# Find a service running on a port
+nc -v -n hostIP 80            # Obtain port banner for port 80, telling what service is behind a port; -n: disable DNS or service lookups
+nc -vn hostIP 80              # Same as above; also test if a remote port is open
+echo "QUIT" | nc hostIP 20-30
+
+# Retrieve the home page of a website
+echo -n "GET / HTTP/1.0\r\n\r\n" | nc host.example.com 80
+
+# Open a TCP connection to port 42 of host.example.com, using port 31337 as the source port, with a timeout of 5 seconds:
+nc -p 31337 -w 5 host.example.com 42                # -p: source_port
+
+# Open a UDP connection to port 53 of host.example.com
+nc -u host.example.com 53
+
+# Open a TCP connection to port 42 of host.example.com using 10.1.2.3 as the IP for the local end of the connection
+nc -s 10.1.2.3 host.example.com 42                  # -s: source_ip_address
+
+# Create and listen on a Unix Domain Socket
+nc -lU /var/tmp/dsocket                             # -U: Specifies to use Unix Domain Sockets
+ss -lpn | grep "/var/tmp/"                          # ss: socket statistics to print the socket info
+
+# Connect to port 42 of host.example.com via an HTTP proxy at 10.2.3.4, port 8080.
+# This example could also be used by ssh(1); see the ProxyCommand directive in ssh_config(5) for more information.
+nc -x10.2.3.4:8080 -Xconnect host.example.com 42
+
