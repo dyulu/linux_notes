@@ -1,0 +1,44 @@
+watch: used to run an arbitrary command at regular interval and display the output of the command on the terminal
+
+watch -n INTERVAL_IN_SECONDS COMMAND
+watch -n 5 df -h
+
+# -p, --precise: make watch attempt to run command every interval seconds
+watch -p ip a         # Watch network interfaces
+
+# -d, --difference: highlights the changes
+# --differences=permanent: make cursor highlighter permanent instead of being on & off
+# Default every 2 seconds
+watch -d COMMAND
+watch -d ls -l        # Watch for directory change
+
+# -t, --no-title: turn off the header showing the interval, command, and the current time 
+watch -t free -m      # Watch amount of free and used memory in the system, showing in mb
+
+# -b, --beep:  beep if the command has a non-zero exit
+watch -b free -m
+
+# Stop watching when there are changes in memory consumption
+watch -g free
+
+# -e, --errexit: freeze the updates on command error, and exit after a key press
+
+watch 'COMMAND_1 | COMMAND_2'
+watch "netstat -anp | grep -c ':80\b.*LISTEN'"
+watch -d 'ls -l | fgrep doe'
+watch "ps aux | sort -nrk 3,3 | head -n 5"        # Watch the most CPU intensive processes
+
+# Options
+#  -b, --beep             beep if command has a non-zero exit
+#  -c, --color            interpret ANSI color and style sequences
+#  -d, --differences[=<permanent>]
+#                         highlight changes between updates
+#  -e, --errexit          exit if command has a non-zero exit
+#  -g, --chgexit          exit when output from command changes
+#  -n, --interval <secs>  seconds to wait between updates
+#  -p, --precise          attempt run command in precise intervals
+#  -t, --no-title         turn off header
+#  -x, --exec             pass command to exec instead of "sh -c"
+#
+# -h, --help     display this help and exit
+# -v, --version  output version information and exit
