@@ -1,0 +1,151 @@
+==== ulimit
+
+$ ulimit --help
+ulimit: ulimit [-SHabcdefiklmnpqrstuvxPT] [limit]
+    Modify shell resource limits.
+    
+    Provides control over the resources available to the shell and processes
+    it creates, on systems that allow such control.
+    
+    Options:
+      -S	use the `soft' resource limit
+      -H	use the `hard' resource limit
+      -a	all current limits are reported
+      -b	the socket buffer size
+      -c	the maximum size of core files created
+      -d	the maximum size of a process's data segment
+      -e	the maximum scheduling priority (`nice')
+      -f	the maximum size of files written by the shell and its children
+      -i	the maximum number of pending signals
+      -k	the maximum number of kqueues allocated for this process
+      -l	the maximum size a process may lock into memory
+      -m	the maximum resident set size
+      -n	the maximum number of open file descriptors
+      -p	the pipe buffer size
+      -q	the maximum number of bytes in POSIX message queues
+      -r	the maximum real-time scheduling priority
+      -s	the maximum stack size
+      -t	the maximum amount of cpu time in seconds
+      -u	the maximum number of user processes
+      -v	the size of virtual memory
+      -x	the maximum number of file locks
+      -P	the maximum number of pseudoterminals
+      -T	the maximum number of threads
+    
+    Not all options are available on all platforms.
+    
+    If LIMIT is given, it is the new value of the specified resource; the
+    special LIMIT values `soft', `hard', and `unlimited' stand for the
+    current soft limit, the current hard limit, and no limit, respectively.
+    Otherwise, the current value of the specified resource is printed.  If
+    no option is given, then -f is assumed.
+    
+    Values are in 1024-byte increments, except for -t, which is in seconds,
+    -p, which is in increments of 512 bytes, and -u, which is an unscaled
+    number of processes.
+    
+    Exit Status:
+    Returns success unless an invalid option is supplied or an error occurs.
+
+$ ulimit -a
+core file size          (blocks, -c) 0
+data seg size           (kbytes, -d) unlimited
+scheduling priority             (-e) 0
+file size               (blocks, -f) unlimited
+pending signals                 (-i) 1030263
+max locked memory       (kbytes, -l) 65536
+max memory size         (kbytes, -m) unlimited
+open files                      (-n) 1024
+pipe size            (512 bytes, -p) 8
+POSIX message queues     (bytes, -q) 819200
+real-time priority              (-r) 0
+stack size              (kbytes, -s) 8192
+cpu time               (seconds, -t) unlimited
+max user processes              (-u) 1030263
+virtual memory          (kbytes, -v) unlimited
+file locks                      (-x) unlimited
+
+$ cat /etc/security/limits.conf
+# /etc/security/limits.conf
+#
+#Each line describes a limit for a user in the form:
+#
+#<domain>        <type>  <item>  <value>
+#
+#Where:
+#<domain> can be:
+#        - a user name
+#        - a group name, with @group syntax
+#        - the wildcard *, for default entry
+#        - the wildcard %, can be also used with %group syntax,
+#                 for maxlogin limit
+#        - NOTE: group and wildcard limits are not applied to root.
+#          To apply a limit to the root user, <domain> must be
+#          the literal username root.
+#
+#<type> can have the two values:
+#        - "soft" for enforcing the soft limits
+#        - "hard" for enforcing hard limits
+#
+#<item> can be one of the following:
+#        - core - limits the core file size (KB)
+#        - data - max data size (KB)
+#        - fsize - maximum filesize (KB)
+#        - memlock - max locked-in-memory address space (KB)
+#        - nofile - max number of open file descriptors
+#        - rss - max resident set size (KB)
+#        - stack - max stack size (KB)
+#        - cpu - max CPU time (MIN)
+#        - nproc - max number of processes
+#        - as - address space limit (KB)
+#        - maxlogins - max number of logins for this user
+#        - maxsyslogins - max number of logins on the system
+#        - priority - the priority to run user process with
+#        - locks - max number of file locks the user can hold
+#        - sigpending - max number of pending signals
+#        - msgqueue - max memory used by POSIX message queues (bytes)
+#        - nice - max nice priority allowed to raise to values: [-20, 19]
+#        - rtprio - max realtime priority
+#        - chroot - change root to directory (Debian-specific)
+#
+#<domain>      <type>  <item>         <value>
+#
+
+#*               soft    core            0
+#root            hard    core            100000
+#*               hard    rss             10000
+#@student        hard    nproc           20
+#@faculty        soft    nproc           20
+#@faculty        hard    nproc           50
+#ftp             hard    nproc           0
+#ftp             -       chroot          /ftp
+#@student        -       maxlogins       4
+
+# End of file
+
+==== core
+
+# To allow core file generation, e.g., on segmentation fault, set a core file size limit
+$ ulimit -c unlimitedi
+
+# The following says the core file will be in PWD with filename core
+$  cat /proc/sys/kernel/core_pattern
+core
+
+# You can use the following pattern elements in the core_pattern file:
+%p: pid
+%: '%' is dropped
+%%: output one '%'
+%u: uid
+%g: gid
+%s: signal number
+%t: UNIX time of dump
+%h: hostname
+%e: executable filename
+%: both are dropped
+
+# To save core file at /var/crash/ with executable filename, PID, hostname and UNIX time
+$ echo "/var/crash/core.%e.%p.%h.%t" > /proc/sys/kernel/core_pattern
+
+# To make it permanent, add the following to /etc/sysctl.conf
+kernel.core_pattern=/var/crash/core.%e.%p.%h.%t
