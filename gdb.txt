@@ -1,0 +1,340 @@
+
+====
+
+https://sourceware.org/gdb/current/onlinedocs/gdb/Compilation.html#Compilation
+# Keep debug symbols
+$ gcc -g ...         Create an executable that can be debugged using GDB
+
+file core_file
+file the_executable
+
+https://sourceware.org/gdb/current/onlinedocs/gdb/index.html#SEC_Contents
+
+==== User defined GDB commands
+
+$ gdb --config | grep -i python
+             --with-python=/usr (relocatable)
+
+# https://sourceware.org/gdb/current/onlinedocs/gdb/Python.html#Python
+# https://sourceware.org/gdb/current/onlinedocs/gdb/Commands-In-Python.html#Commands-In-Python
+# https://sourceware.org/gdb/current/onlinedocs/gdb/Values-From-Inferior.html#Values-From-Inferior
+# https://sourceware.org/gdb/current/onlinedocs/gdb/Writing-a-Pretty_002dPrinter.html#Writing-a-Pretty_002dPrinter
+# https://undo.io/resources/gdb-watchpoint/here-quick-way-pretty-print-structures-gdb/
+# https://interrupt.memfault.com/blog/automate-debugging-with-gdb-python-api
+(gdb) help user-defined
+
+
+==== gdb help
+
+$ gdb --help
+This is the GNU debugger.  Usage:
+
+    gdb [options] [executable-file [core-file or process-id]]
+    gdb [options] --args executable-file [inferior-arguments ...]
+
+Selection of debuggee and its files:
+
+  --args             Arguments after executable-file are passed to inferior
+  --core=COREFILE    Analyze the core dump COREFILE.
+  --exec=EXECFILE    Use EXECFILE as the executable.
+  --pid=PID          Attach to running process PID.
+  --directory=DIR    Search for source files in DIR.
+  --se=FILE          Use FILE as symbol file and executable file.
+  --symbols=SYMFILE  Read symbols from SYMFILE.
+  --readnow          Fully read symbol files on first access.
+  --readnever        Do not read symbol files.
+  --write            Set writing into executable and core files.
+
+Initial commands and command files:
+
+  --command=FILE, -x Execute GDB commands from FILE.
+  --init-command=FILE, -ix
+                     Like -x but execute commands before loading inferior.
+  --eval-command=COMMAND, -ex
+                     Execute a single GDB command.
+                     May be used multiple times and in conjunction
+                     with --command.
+  --init-eval-command=COMMAND, -iex
+                     Like -ex but before loading inferior.
+  --nh               Do not read ~/.gdbinit.
+  --nx               Do not read any .gdbinit files in any directory.
+
+Output and user interface control:
+
+  --fullname         Output information used by emacs-GDB interface.
+  --interpreter=INTERP
+                     Select a specific interpreter / user interface
+  --tty=TTY          Use TTY for input/output by the program being debugged.
+  -w                 Use the GUI interface.
+  --nw               Do not use the GUI interface.
+  --tui              Use a terminal user interface.
+  --dbx              DBX compatibility mode.
+  -q, --quiet, --silent
+                     Do not print version number on startup.
+
+Operating modes:
+
+  --batch            Exit after processing options.
+  --batch-silent     Like --batch, but suppress all gdb stdout output.
+  --return-child-result
+                     GDB exit code will be the child's exit code.
+  --configuration    Print details about GDB configuration and then exit.
+  --help             Print this message and then exit.
+  --version          Print version information and then exit.
+
+Remote debugging options:
+
+  -b BAUDRATE        Set serial port baud rate used for remote debugging.
+  -l TIMEOUT         Set timeout in seconds for remote debugging.
+
+Other options:
+
+  --cd=DIR           Change current directory to DIR.
+  --data-directory=DIR, -D
+                     Set GDB's data-directory to DIR.
+
+At startup, GDB reads the following init files and executes their commands:
+   * system-wide init file: /etc/gdb/gdbinit
+
+For more information, type "help" from within GDB, or consult the
+GDB manual (available as on-line info or a printed manual).
+Report bugs to "<http://www.gnu.org/software/gdb/bugs/>".
+
+==== help inside gdb
+
+(gdb) help
+List of classes of commands:
+
+aliases -- Aliases of other commands
+breakpoints -- Making program stop at certain points
+data -- Examining data
+files -- Specifying and examining files
+internals -- Maintenance commands
+obscure -- Obscure features
+running -- Running the program
+stack -- Examining the stack
+status -- Status inquiries
+support -- Support facilities
+tracepoints -- Tracing of program execution without stopping the program
+user-defined -- User-defined commands
+
+Type "help" followed by a class name for a list of commands in that class.
+Type "help all" for the list of all commands.
+Type "help" followed by command name for full documentation.
+Type "apropos word" to search for commands related to "word".
+Command name abbreviations are allowed if unambiguous.
+
+(gdb) help run            bottom-level help for a command "run"
+(gdb) help info           list info commands (running program state)
+(gdb) help info line      help for a particular info command
+(gdb) help show           list show commands (gdb state)
+(gdb) help show commands  specific help for a show command
+
+==== Startup 
+
+gdb executable            normal debug 
+gdb --args executable args
+gdb executable core_file  core debug
+gdb --pid pid             attach to a running process
+gdb                       use file command to load executable 
+
+(gdb) file FILE           load new file for debug (sym+exec)
+(gdb) file                discard sym+exec file info
+(gdb) symbol-file FILE    load only symbol table
+(gdb) exec-file FILE      specify object to run (not sym-file)
+(gdb) core-file FILE      post-mortem debugging
+
+(gdb) run                 run the program with current arguments
+(gdb) run args redirection  run with args and redirection
+(gdb) set args args...    set arguments for run
+(gdb) show args           show current arguments to run
+
+==== Stack backtrace
+
+(gdb) bt                  print stack backtrace
+(gdb) where               same as bt
+(gdb) bt full             also print local variables in each frame
+(gdb) where full          same as bt full
+(gdb) frame               show current execution position
+(gdb) up                  move up stack trace  (towards main)
+(gdb) down                move down stack trace (away from main)
+(gdb) info locals         print automatic variables in frame
+(gdb) info args           print function parameters
+(gdb) frame frame#        select stack frame to operate on
+
+==== Thread
+
+https://sourceware.org/gdb/current/onlinedocs/gdb/Threads.html#Threads
+
+(gdb) info threads        list all threads
+(gdb) thread thread#      select thread to operate on
+
+==== Call function
+
+# Need a live process to do this. For example, when execution hits a breakpoint
+# Cannot do this when debug a core dump
+(gdb) info functions regexp  print function names which match regexp
+(gdb) call function args     call a function in the executable, print result, save it in value history
+(gdb) p function args        notation for function and args follows the notation of the current working language
+
+# When no live process
+(gdb)  p ((double(*)())pow)(2.,2.)
+You can't do that without a process to debug.
+# When in live process
+(gdb)  p pow(2.,2.)
+'powf64' has unknown return type; cast the call to its declared return type
+(gdb)  p ((double(*)())pow)(2.,2.)
+$1 = 4
+# Call function without debug info: print (<return type> <function name> (<parameters>)
+(gdb)  p (double)pow(2.,2.)
+$2 = 4
+
+==== Examine data
+
+https://sourceware.org/gdb/current/onlinedocs/gdb/Data.html#Data
+
+(gdb) set print pretty on/off
+(gdb) print expr           print variable/memory location/register, added to value history
+(gdb) print/format expr    print with specified format
+(gdb) print/x expr         print in hex
+(gdb) print array[i]@count print array range, i.e, i to i + count, of variable array
+(gdb) p *array@len         int *array = (int *) malloc (len * sizeof (int))
+(gdb) print ::gx           force scope to be global
+(gdb) print 'basic.c'::gx  global scope in named file
+(gdb) print/x &main        print address of function
+(gdb) x/x &gx              print gx in hex
+(gdb) ptype name           print type definition           # print struct struct_name definition: ptype struct_name
+(gdb) whatis expr          print type of expression
+(gdb) set variable = expr  assign value to variable
+(gdb) display expr         automatically evaluate the expression each time GDB stops at a breakpoint or after a step
+(gdb) display/format expr
+(gdb) undisplay            delete displays
+(gdb) info variables regexp  print global variable names  # globals started w/ g_: info variables ^g_
+(gdb) info display         show displays
+(gdb) show values          print value history
+
+(gdb) ptype[/FLAGS] TYPE | EXPRESSION
+Argument may be any type (for example a type name defined by typedef,
+or "struct STRUCT-TAG" or "class CLASS-NAME" or "union UNION-TAG"
+or "enum ENUM-TAG") or an expression.
+The selected stack frame's lexical context is used to look up the name.
+Contrary to "whatis", "ptype" always unrolls any typedefs.
+
+Available FLAGS are:
+  /r    print in "raw" form; do not substitute typedefs
+  /m    do not print methods defined in a class
+  /M    print methods defined in a class
+  /t    do not print typedefs defined in a class
+  /T    print typedefs defined in a class
+  /o    print offsets and sizes of fields in a struct
+
+(gdb) x/nfu address       print memory
+n: How many units to print (default 1)
+f: Format character (like „print“)
+u: Unit, one ofthe following:
+   b: Byte
+   h: Half-word (two bytes)
+   w: Word (four bytes)
+   g: Giant word (eight bytes))
+
+# Format
+a Pointer
+c Read as integer, print as character. d Integer, signed decimal
+f Floating point number
+o Integer, print as octal
+s Try to treat as C string
+t Integer, print as binary (t = „two“)
+u Integer, unsigned decimal
+x Integer, print as hexadecimal
+
+
+Breakpoints
+(gdb) break main        set a breakpoint on a function
+(gdb) break 101         set a breakpoint on a line number
+(gdb) break basic.c:101 set breakpoint at file and line (or function)
+(gdb) info breakpoints  show breakpoints
+(gdb) delete 1          delete a breakpoint by number
+(gdb) delete            delete all breakpoints (prompted)
+(gdb) clear             delete breakpoints at current line
+(gdb) clear function    delete breakpoints at function
+(gdb) clear line        delete breakpoints at line
+(gdb) disable 2         turn a breakpoint off, but don't remove it
+(gdb) enable 2          turn disabled breakpoint back on
+(gdb) tbreak function|line        set a temporary breakpoint
+(gdb) commands break-no ... end   set gdb commands with breakpoint
+(gdb) ignore break-no count       ignore bpt N-1 times before activation
+(gdb) condition break-no expr     break only if condition is true
+(gdb) condition 2 i == 20         example: break on breakpoint 2 if i equals 20
+(gdb) watch expression            set software watchpoint on variable
+(gdb) info watchpoints            show current watchpoints
+
+Running the program
+(gdb) cont            continue the program
+(gdb) step            single step the program; step into functions
+(gdb) step count      singlestep count times
+(gdb) next            step but step over functions 
+(gdb) next count      next count times
+(gdb) CTRL-C          actually SIGINT, stop execution of current program 
+(gdb) attach pid      attach to running program
+(gdb) detach          detach from running program
+(gdb) finish          finish current function's execution
+(gdb) kill            kill current executing program 
+
+Browsing source
+(gdb) list 101          list 10 lines around line 101
+(gdb) list 1,10         list lines 1 to 10
+(gdb) list main         list lines around function 
+(gdb) list basic.c:main list from another file basic.c
+(gdb) list -            list previous 10 lines
+(gdb) list 0x22e4       list source at address
+(gdb) cd dir            change current directory to dir
+(gdb) pwd               print working directory
+(gdb) search regexpr    forward current for regular expression
+(gdb) reverse-search regexpr  backward search for regular expression
+(gdb) dir dirname       add directory to source path
+(gdb) dir               reset source path to nothing
+(gdb) show directories  show source path
+
+Signal Control
+(gdb) info signals            print signal setup
+(gdb) handle signo actions    set debugger actions for signal
+(gdb) handle INT print        print message when signal occurs
+(gdb) handle INT noprint      don't print message
+(gdb) handle INT stop         stop program when signal occurs
+(gdb) handle INT nostop       don't stop program
+(gdb) handle INT pass         allow program to receive signal
+(gdb) handle INT nopass       debugger catches signal; program doesn't
+(gdb) signal signo            continue and send signal to program
+(gdb) signal 0                continue and send no signal to program
+
+Machine-level Debug
+(gdb) info registers          print registers sans floats
+(gdb) info all-registers      print all registers
+(gdb) print/x $pc             print one register
+(gdb) stepi                   single step at machine level
+(gdb) si                      single step at machine level
+(gdb) nexti                   single step (over functions) at machine level
+(gdb) ni                      single step (over functions) at machine level
+(gdb) display/i $pc           print current instruction in display
+(gdb) x/x &gx                 print variable gx in hex
+(gdb) info line 22            print addresses for object code for line 22
+(gdb) info line 0x2c4e        print line number of object code at address
+(gdb) x/10i main              disassemble first 10 instructions in main
+(gdb) disassemble addr        dissassemble code for function around addr
+
+History Display
+(gdb) show commands             print command history
+(gdb) set history expansion on  turn on c-shell like history
+(gdb) break class::member       set breakpoint on class member. may get menu
+(gdb) list class::member        list member in class
+(gdb) ptype class               print class members
+(gdb) print this                print contents of this pointer
+(gdb) rbreak regexpr            useful for breakpoint on overloaded member name
+
+Miscellaneous
+(gdb) define command ... end    define user command
+(gdb) RETURN                    repeat last command
+(gdb) shell command args        execute shell command 
+(gdb) source file               load gdb commands from file
+(gdb) quit                      quit gdb
+(gdb) q                         quit gdb
