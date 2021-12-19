@@ -1,0 +1,216 @@
+The process scheduler is responsible for choosing which processes run and for how long.
+Linux is a preemptive operating system.
+The latest Linux scheduler is CFS, i.e., Completely Fair Scheduler.
+Scheduling policies are the rules the scheduler follows to determine what should run and when.
+
+One type of scheduling algorithm is priority scheduling.
+The kernel uses two separate priority values. A nice value, and a real-time priority value.
+
+The nice value is a number from -20 to +19 with a default of 0. The larger the nice value, the lower the priority.
+In Linux, the nice value controls the proportion of timeslice.
+
+The real-time priority value can range from 0 to 99, although the value is configurable. Higher value means higher priority.
+
+The scheduler policy must decide on a default timeslice. A common default timeslice value is 10ms.
+
+The CFS scheduler class is the registered class for normal processes (SCHED_NORMAL).
+
+Linux includes two real-time scheduling policies: SCHED_FIFO, and SCHED_RR. 
+These policies are managed by a real-time scheduler.
+
+SCHED_FIFO doesn’t use timeslices. A SCHED_FIFO task is scheduled before any SCHED_NORMAL tasks.
+Only a higher priority SCHED_FIFO or SCHED_RR can preempt a SCHED_FIFO task.
+A SCHED_FIFO task runs until it blocks or yields the processor.
+SCHED_FIFO with the same priority run round-robin style.
+
+SCHED_RR is identical to SCHED_FIFO except each task runs for a specific timeslice.
+
+Linux attempts to schedule real-time processes within a deadline, but it’s not always able to.
+
+Real-time priorities range from 0 to MAX_RT_PRIO - 1. The default value of MAX_RT_PRIO is 100.
+The priority space is shared by nice values, which range from MAX_RT_PRIO to MAX_RT_PRIO + 40.
+By default the -20 to 19 of nice values map to priority space 100 to 139.
+
+Since version 3.14, Linux provides a deadline scheduling policy (SCHED_DEADLINE).
+
+For threads scheduled under one of the normal scheduling policies (SCHED_OTHER, SCHED_IDLE, SCHED_BATCH),
+sched_priority is not used in scheduling decisions (it must be specified as 0).
+
+SCHED_OTHER is the standard Linux time-sharing scheduler that is intended for all threads that do not require
+the special real-time mechanisms.
+
+A hard process affinity tells the scheduler that the process must be kept running on this subset of processors no matter what.
+The hard affinity is stored in a bitmask in the task’s task_struct as cpus_allowed.
+The bitmask contains one bit for each possible processor. 
+User can set a different bitmask with sched_setaffinity() to change which processors the process can run on.
+
+Non-superuser threads are not allowed to run above priority 19.
+sysctl settings limiting amount of time available to each thread, for instance:
+    sysctl -w ernel.sched_rt_period_us = 1000000
+    sysctl -w kernel.sched_rt_runtime_us = 950000, allowing threads to only run 95% of each second.
+$ sysctl -a | grep sched_rt
+kernel.sched_rt_period_us = 1000000
+kernel.sched_rt_runtime_us = 950000
+
+$ zgrep SCHED /proc/config.gz        # zcat /proc/config.gz | grep SCHED
+CONFIG_HAVE_UNSTABLE_SCHED_CLOCK=y
+CONFIG_CGROUP_SCHED=y
+CONFIG_FAIR_GROUP_SCHED=y
+# CONFIG_RT_GROUP_SCHED is not set
+CONFIG_SCHED_AUTOGROUP=y
+CONFIG_SCHED_OMIT_FRAME_POINTER=y
+CONFIG_SCHED_SMT=y
+CONFIG_SCHED_MC=y
+CONFIG_SCHED_MC_PRIO=y
+CONFIG_SCHED_HRTICK=y
+# CONFIG_CPU_FREQ_DEFAULT_GOV_SCHEDUTIL is not set
+CONFIG_CPU_FREQ_GOV_SCHEDUTIL=y
+CONFIG_MQ_IOSCHED_DEADLINE=y
+CONFIG_MQ_IOSCHED_KYBER=y
+CONFIG_IOSCHED_BFQ=m
+CONFIG_BFQ_GROUP_IOSCHED=y
+CONFIG_NET_SCHED=y
+CONFIG_USB_EHCI_TT_NEWSCHED=y
+CONFIG_SCHED_STACK_END_CHECK=y
+CONFIG_SCHED_DEBUG=y
+CONFIG_SCHED_INFO=y
+CONFIG_SCHEDSTATS=y
+CONFIG_SCHED_TRACER=y
+
+$ cat /proc/sched_debug
+$ cat /proc/$(pidof kv_bench)/sched
+$ cat /proc/$(pidof kv_bench)/cpuset
+$ ls /proc/$(pidof kv_bench)/task/
+
+# PSR: processor that process is currently assigned to
+# CPUID:
+$ watch -dn0.1 ps  -mo pid,tid,%cpu,psr,cls,pri,time,cmd -p $(pidof kv_bench)     # -d: highligh diff; -n: specified internal 0.1 s
+Every 2.0s: ps -mo pid,tid,%cpu,psr,cls,pri,time,cmd -p
+  PID   TID %CPU PSR CLS PRI     TIME CMD
+36944     - 25.9   -   -   - 00:00:13 ./kv_bench -f bench_config.ini
+    - 36944  0.5   0  TS  19 00:00:00 -
+    - 36945  0.0  40  TS  19 00:00:00 -
+    - 36946  0.0  41  TS  19 00:00:00 -
+    - 36947  0.0  32  TS  19 00:00:00 -
+    - 36948 16.7   0  TS  19 00:00:08 -
+    - 36949  9.0   0  TS  19 00:00:04 -
+
+# taskset: set or retrieve a process's CPU affinity
+#  taskset [options] mask command [argument...]   # launch command with a given CPU affinity; 0x3 - #0 and #1; --cpu-list 0-2,6
+#  taskset [options] -p [mask] pid
+$ taskset --cpu-list 0 ./kv_bench -f bench_config.ini   # launch kv_bench so all threads will run on core 0
+$ taskset -pc $(pidof kv_bench)
+pid 37507's current affinity list: 0
+$ taskset -pc 0 $(pidof kv_bench)
+pid 37507's current affinity list: 0
+pid 37507's new affinity list: 0
+
+# TS is SCHED_OTHER
+# RR is SCHED_RR
+# FF is SCHED_FIFO
+$ chrt -p $(pidof kv_bench)
+pid 35741's current scheduling policy: SCHED_OTHER
+pid 35741's current scheduling priority: 0
+$ ps -cT -F -p $(pidof kv_bench)
+UID        PID  SPID  PPID CLS PRI    SZ   RSS PSR STIME TTY          TIME CMD
+root     35741 35741 32199 TS   19 33590025 54256 0 15:20 pts/0   00:00:00 ./kv_bench -f bench_config.ini
+root     35741 35743 32199 TS   19 33590025 54256 40 15:20 pts/0  00:00:00 ./kv_bench -f bench_config.ini
+root     35741 35744 32199 TS   19 33590025 54256 41 15:20 pts/0  00:00:00 ./kv_bench -f bench_config.ini
+root     35741 35745 32199 TS   19 33590025 54256 14 15:20 pts/0  00:00:00 ./kv_bench -f bench_config.ini
+root     35741 35746 32199 TS   19 33590025 54256 0 15:20 pts/0   00:00:08 ./kv_bench -f bench_config.ini
+root     35741 35747 32199 TS   19 33590025 54256 0 15:20 pts/0   00:00:03 ./kv_bench -f bench_config.ini
+$ ps -cL -F -p $(pidof kv_bench)
+UID        PID  PPID   LWP NLWP CLS PRI    SZ   RSS PSR STIME TTY          TIME CMD
+root     35741 32199 35741    6 TS   19 33590025 54276 0 15:20 pts/0   00:00:00 ./kv_bench -f bench_config.ini
+root     35741 32199 35743    6 TS   19 33590025 54276 40 15:20 pts/0  00:00:00 ./kv_bench -f bench_config.ini
+root     35741 32199 35744    6 TS   19 33590025 54276 41 15:20 pts/0  00:00:00 ./kv_bench -f bench_config.ini
+root     35741 32199 35745    6 TS   19 33590025 54276 14 15:20 pts/0  00:00:00 ./kv_bench -f bench_config.ini
+root     35741 32199 35746    6 TS   19 33590025 54276 0 15:20 pts/0   00:00:09 ./kv_bench -f bench_config.ini
+root     35741 32199 35747    6 TS   19 33590025 54276 0 15:20 pts/0   00:00:03 ./kv_bench -f bench_config.ini
+$ ps -cL -p $(pidof kv_bench)
+  PID   LWP CLS PRI TTY          TIME CMD
+35741 35741 TS   19 pts/0    00:00:00 kv_bench
+35741 35743 TS   19 pts/0    00:00:00 eal-intr-thread
+35741 35744 TS   19 pts/0    00:00:00 rte_mp_handle
+35741 35745 TS   19 pts/0    00:00:00 kv_bench
+35741 35746 TS   19 pts/0    00:00:19 kv_bench
+35741 35747 TS   19 pts/0    00:00:07 BenchMixer
+$ ps -O "%mem nice state upr pri cpu" -T -p $(pidof kv_bench)
+  PID %MEM  NI S UPR PRI CPU S TTY          TIME COMMAND
+35741  0.0   0 S   -  19   - S pts/0    00:00:00 ./kv_bench -f bench_config.ini
+35741  0.0   0 S   -  19   - S pts/0    00:00:00 ./kv_bench -f bench_config.ini
+35741  0.0   0 S   -  19   - S pts/0    00:00:00 ./kv_bench -f bench_config.ini
+35741  0.0   0 S   -  19   - S pts/0    00:00:00 ./kv_bench -f bench_config.ini
+35741  0.0   0 R   -  19   - R pts/0    00:00:10 ./kv_bench -f bench_config.ini
+35741  0.0   0 S   -  19   - S pts/0    00:00:04 ./kv_bench -f bench_config.ini
+
+root@SmartGen2:~# ps -cL -p $(pidof spdk_nvme_perf)
+  PID   LWP CLS PRI TTY          TIME CMD
+36017 36017 TS   19 pts/0    00:00:18 spdk_nvme_perf
+36017 36018 TS   19 pts/0    00:00:00 eal-intr-thread
+36017 36019 TS   19 pts/0    00:00:00 spdk_nvme_perf
+36017 36020 TS   19 pts/0    00:00:00 spdk_nvme_perf
+
+# chrt - manipulate the real-time attributes of a process
+# sets or retrieves the real-time scheduling attributes of an existing pid, or runs command with the given attributes
+       chrt [options] priority command [argument...]
+       chrt [options] -p [priority] pid
+POLICIES
+       -o, --other
+              Set scheduling policy to SCHED_OTHER.  This is the default Linux scheduling policy.
+       -f, --fifo
+              Set scheduling policy to SCHED_FIFO.
+       -r, --rr
+              Set scheduling policy to SCHED_RR.  When no policy is defined, the SCHED_RR is used as the default.
+
+       -b, --batch
+              Set scheduling policy to SCHED_BATCH (Linux-specific, supported since 2.6.16).  The priority argument has to be set to zero.
+       -i, --idle
+              Set scheduling policy to SCHED_IDLE (Linux-specific, supported since 2.6.23).  The priority argument has to be set to zero.
+       -d, --deadline
+              Set  scheduling  policy  to  SCHED_DEADLINE  (Linux-specific,  supported  since 3.14).  The priority argument has to be set to zero.  See also
+              --sched-runtime, --sched-deadline and --sched-period.  The relation between the options required by the kernel is runtime <= deadline  <=  pe‐
+              riod.   chrt  copies  period to deadline if --sched-deadline is not specified and deadline to runtime if --sched-runtime is not specified.  It
+              means that at least --sched-period has to be specified.  See sched(7) for more details.
+
+SCHEDULING OPTIONS
+       -T, --sched-runtime nanoseconds
+              Specifies runtime parameter for SCHED_DEADLINE policy (Linux-specific).
+       -P, --sched-period nanoseconds
+              Specifies period parameter for SCHED_DEADLINE policy (Linux-specific).
+       -D, --sched-deadline nanoseconds
+              Specifies deadline parameter for SCHED_DEADLINE policy (Linux-specific).
+       -R, --reset-on-fork
+              Add SCHED_RESET_ON_FORK flag to the SCHED_FIFO or SCHED_RR scheduling policy (Linux-specific, supported since 2.6.31).
+
+OPTIONS
+       -a, --all-tasks
+              Set or retrieve the scheduling attributes of all the tasks (threads) for a given PID.
+       -m, --max
+              Show minimum and maximum valid priorities, then exit.
+       -p, --pid
+              Operate on an existing PID and do not launch a new task.
+       -v, --verbose
+              Show status information.
+       -V, --version
+              Display version information and exit.
+       -h, --help
+              Display help text and exit.
+
+NOTES
+       Only SCHED_FIFO, SCHED_OTHER and SCHED_RR are part of POSIX 1003.1b Process Scheduling.  The other scheduling attributes may be ignored on some  sys‐
+       tems.
+
+==== Example to use FIFO scheduler with priority of 10 for the thread
+
+struct sched_param param;
+param.sched_priority = 10;
+pthread_setschedparam(pthread_self(), SCHED_FIFO, &param);
+
+==== Example to make thread run on core 0 only
+
+unsigned int cpu_id = 0;
+cpu_set_t cpuset;                                  # Bitmask, represents a set of CPUs
+CPU_ZERO(&cpuset);                                 # Clears cpuset, so that it contains no CPUs
+CPU_SET(cpu_id, &cpuset);                          # Add CPU cpu_id to cpuset
+sched_setaffinity(0, sizeof(cpu_set_t), &cpuset);  # Set the set of CPUs on which the current thread is eligible to run on
