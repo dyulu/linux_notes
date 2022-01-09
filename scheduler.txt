@@ -214,3 +214,90 @@ cpu_set_t cpuset;                                  # Bitmask, represents a set o
 CPU_ZERO(&cpuset);                                 # Clears cpuset, so that it contains no CPUs
 CPU_SET(cpu_id, &cpuset);                          # Add CPU cpu_id to cpuset
 sched_setaffinity(0, sizeof(cpu_set_t), &cpuset);  # Set the set of CPUs on which the current thread is eligible to run on
+
+==== Example to set attr at thread creation
+
+struct sched_param {
+    int32_t  sched_priority;
+    int32_t  sched_curpriority;
+    union {
+        int32_t  reserved[8];
+        struct {
+            int32_t  __ss_low_priority;
+            int32_t  __ss_max_repl;
+            struct timespec     __ss_repl_period;
+            struct timespec     __ss_init_budget;
+        }           __ss;
+    }           __ss_un;
+}
+
+typedef struct {
+    int                 __flags;
+    size_t              __stacksize;
+    void                *__stackaddr;
+    void                (*__exitfunc)(void *status);
+    int                 __policy;
+    struct sched_param  __param;
+    unsigned            __guardsize;
+} pthread_attr_t;
+
+Default values for attributes:
+Attribute    Value                    Result
+scope        PTHREAD_SCOPE_PROCESS    New thread is unbound - not permanently attached to LWP
+detachstate  PTHREAD_CREATE_JOINABLE  Exit status and thread are preserved after the thread terminates
+stackaddr    NULL                     New thread has system-allocated stack address
+stacksize    1 megabyte               New thread has system-defined stack size
+priority                              New thread inherits parent thread priority
+inheritsched PTHREAD_INHERIT_SCHED    New thread inherits parent thread scheduling priority
+schedpolicy  SCHED_OTHER              New thread uses Solaris-defined fixed priority scheduling;
+                                      threads run until preempted by a higher-priority thread or until they block or yield
+
+==
+
+static void* thread_start(void *arg);   # Function for the thread to run
+
+pthread_t thread;
+int policy = SCHED_FIFO;
+pthread_attr_t attr;
+struct sched_param param;
+int ret;
+
+ret = pthread_attr_init(&attr);
+if (ret != 0)
+{
+    fprintf(stderr, "Unable to init pthread attr");
+    return ret;
+}
+// Default PTHREAD_INHERIT_SCHED: affects sched policy, priority, and scope
+ret = pthread_attr_setinheritsched(&attr, PTHREAD_EXPLICIT_SCHED);
+{
+    fprintf(stderr, "Unable to set inherit sched\n");
+    return ret;
+}
+ret = pthread_attr_setschedpolicy(&attr, policy);
+if (ret != 0)
+{
+    fprintf(stderr, "Unable to set sched policy\n");
+    return ret;
+}
+ret = pthread_attr_getschedparam (&attr, &param);
+if (ret != 0)
+{
+    fprintf(stderr, "Unable to get existing parms\n");
+    return ret;
+}
+param.sched_priority = 10;
+ret = pthread_attr_setschedparam(&attr, &param);
+if (ret != 0)
+{
+    fprintf(stderr, "Unable to set parms\n");
+    return ret;
+}
+
+pthread_create(&thread, &attr, &thread_start, NULL);
+
+==== preemption
+
+sleep(0)
+sched_yield()
+pthread_yield()
