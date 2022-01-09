@@ -10,6 +10,8 @@ chassis power cycle:
 chassis power soft:
 chassis power reset:
 
+# Warm: resets the management console without rebooting the BMC
+# Cold: reboots the BMC
 mc reset warm|cold: instructs the BMC to perform a warm or cold reset
 mc info: BMC hardware info
 mc selftest:
@@ -66,6 +68,15 @@ ipmitool -S cached_sdr_file sel elist: speed up sel elist command by using Senso
 
 user summary:
 user list:
+
+==== Supermicro BMC reset to factory default
+
+# Wipe any existing settings on the BMC, but excludes network settings
+https://www.supermicro.com/support/faqs/faq.cfm?faq=15448
+ipmitool raw 0x3c 0x40
+
+# To reset your network settings along with the factory reset
+ipmicfg -fde
 
 ==== Enable user 3
 
