@@ -682,3 +682,59 @@ Comparison operators for --compare-versions are:
   < << <= = >= >> >       (only for compatibility with control file syntax).
 
 Use 'apt' or 'aptitude' for user-friendly package management.
+
+$ dpkg-query --help
+Usage: dpkg-query [<option> ...] <command>
+
+Commands:
+  -s, --status [<package>...]      Display package status details.
+  -p, --print-avail [<package>...] Display available version details.
+  -L, --listfiles <package>...     List files 'owned' by package(s).
+  -l, --list [<pattern>...]        List packages concisely.
+  -W, --show [<pattern>...]        Show information on package(s).
+  -S, --search <pattern>...        Find package(s) owning file(s).
+      --control-list <package>     Print the package control file list.
+      --control-show <package> <file>
+                                   Show the package control file.
+  -c, --control-path <package> [<file>]
+                                   Print path for package control file.
+
+  -?, --help                       Show this help message.
+      --version                    Show the version.
+
+Options:
+  --admindir=<directory>           Use <directory> instead of /var/lib/dpkg.
+  --load-avail                     Use available file on --show and --list.
+  -f|--showformat=<format>         Use alternative format for --show.
+
+Format syntax:
+  A format is a string that will be output for each package. The format
+  can include the standard escape sequences \n (newline), \r (carriage
+  return) or \\ (plain backslash). Package information can be included
+  by inserting variable references to package fields using the ${var[;width]}
+  syntax. Fields will be right-aligned unless the width is negative in which
+  case left alignment will be used.
+
+
+# See if a package is installed
+dpkg-query --list | grep package_name
+dpkg -l | grep package_name
+
+# Remove a package
+dpkg -r package_name
+
+# Install a package
+dpkg -i package.deb
+
+# List package dependency
+dpkg -I package_name
+apt-cache depends package_name
+apt depends package_name
+
+# Check dependency and reverse dependency
+apt-rdepends -r package_name
+apt-cache rdepends package_name
+apt-cache rdepends --installed package_name
+apt rdepends package_name
+apt-cache showpkg emdebian-archive-keyring
+apt --simulate remove package_name           # -s: simulate a remove to find out the dependency
