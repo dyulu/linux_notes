@@ -187,3 +187,45 @@ docker run --rm --mount type=bind,src=${HOME}/.ssh,target=/root/.ssh,readonly an
 --memory-swap         Swap limit equal to memory plus swap: ‘-1’ to enable unlimited swap
 --pids-limit          Tune container pids limit (set -1 for unlimited)
 --restart             Restart policy to apply when a container exits
+
+==== Start a stopped Docker container with a different command
+
+# Find the id of the stoped container
+docker ps -a
+# Commit the stopped container
+docker commit $CONTAINER_ID test_image
+# Run with a different entry point
+docker run -it --entrypoint=sh test_image
+
+==== Persist a container: lose history and metadata info; docker images --tree
+
+docker export container_id > exported_container.tar
+docker export -o exported_container.tar container_id
+
+docker import < exported_container.tar
+docker import exported_container.tar
+
+docker import http://1.2.3.4/exported_container.tar
+
+zcat my_container_0.0.1.tgz | sudo docker import - my_container:0.0.1
+
+==== Persist an image: maintain history and layers
+
+docker save image_id > saved_image.tar
+docker save -o saved_image.tar image_id
+docker save image_name:latest | gzip > saved_image.tar.gz
+
+docker load < ./saved_image.tar
+docker load -i saved_image.tar
+
+==== docker image prune 
+
+--all , -a              Remove all unused images, not just dangling ones
+--filter                Provide filter values (e.g. 'until=<timestamp>')
+--force , -f            Do not prompt for confirmation
+
+The currently supported filters are:
+until (<timestamp>) - only remove images created before given timestamp
+label (label=<key>, label=<key>=<value>, label!=<key>, or label!=<key>=<value>)
+                    - only remove images with (or without, in case label!=... is used) the specified labels.
+
