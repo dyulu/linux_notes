@@ -356,3 +356,38 @@ Push an existing repository from the command line:
 git remote add origin https://github.com/myusername/myrepository.git
 git branch -M main
 git push -u origin main
+
+# Track changes to a directory/file; use --follow in case filename changes
+git log --pretty=oneline -- /the/path/
+git log --pretty=oneline --follow -- filename
+
+# Undo the last commit, keep changes in the working directory but NOT in the index
+git reset --mixed HEAD~1
+
+# Amending the message of the last commit
+git commit --amend    # Fill in messages and save
+git push --force-with-lease
+
+--force:            overwrites a remote branch with your local branch
+--force-with-lease: a safer option that will not overwrite any work on the remote branch
+                    In case of more commits were added to the remote branch (by another team-member), it ensures you
+                    do not overwrite someone elses work by force pushing
+
+# Add a changed file to an older (not last) commit
+git stash                 # store the changes you want to add
+git rebase -i HEAD~10     # or however many commits back you want to see
+Mark the commit in question for edit by changing the word pick at the start of the line into edit
+    Don't delete the other lines as that would delete the commits
+Save the rebase file, and git will drop back to the shell and wait for you to fix that commit
+git stash pop
+git add <file>
+git commit --amend --no-edit
+git rebase --continue    # rewrite the rest of your commits against the new one
+Repeat from step 2 onwards if you have marked more than one commit for edit
+
+# Amending the message of older or multiple commit messages
+git rebase -i HEAD~n     # display a list of the last n commits in your default text editor
+Change the work pick to reword at the start of the line of the commit(s)
+Save and close the commit list file
+In each resulting commit file, type the new commit message, save the file, and close it.
+In case the commits have been pushed before, force-push the amended commits: git push --force-with-lease
