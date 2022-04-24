@@ -1,0 +1,147 @@
+
+# syslog: started in 1980, only supports UDP at the beginning
+#         development stopped for Linux since 2007
+# syslogd: receive local syslog messages, via  /dev/log UNIX socket
+#          write them to a file, e.g., /var/log/messages or /var/log/syslog
+#          forward them to the network or other destinations, via UDP traditionally
+
+# syslog-ng: started in 1998, Next Generation
+#     everything is object 
+#     syntax is clear
+#     New features: content-based filtering
+#                   logging directly into a database
+#                   TCP for transport
+#                   TLS encryption
+
+# rsyslog: started in 2004
+#     New features: RELP Protocol support
+#                   Buffered operation support
+#     config file remains the same as syslog: can copy /etc/syslog.conf directly to /etc/rsyslog.conf
+#     performance-oriented, multipurpose log management tool
+#     can read data from multiple sources, parse and enrich logs in various ways, and ship to various destinations
+
+# rsyslog configuration: use the basic format for basic configurations and the advanced format for anything else
+####### Base format: sector action
+#     sector: a pattern of facilities and priorities; facility.priority; case insensitive
+#     facility: auth, authpriv, cron, daemon, kern, lpr, mail, mark, news, syslog, user, UUCP and local0 through local7
+#     priority: debug, info, notice, warning, err, crit, alert, and emerg
+#
+
+### FILTERs
+# Facility/Priority-based filters: FACILITY.PRIORITY
+# Select all kernel syslog messages with any priority
+kern.*
+
+# Select kernel syslog messages with priority crit and higher
+kern.crit
+
+# Select kernel syslog messages with priority crit only
+kern.=crit
+
+# Select kern syslog messages expect those with info or debug priority
+kern.!info,!debug
+
+# Select debug messages from all facilities
+*.=debug
+
+# Property-based filters: :PROPERTY, [!]COMPARE_OPERATION, "STRING"
+#     starts with a colon
+#     PROPERTY syntax: %PROPERTY_NAME[:FROM_CHAR:TO_CHAR:OPTION]%
+#                      %msg%: whole message text of a syslog message
+#                      %msg:1:2%: first two characters of the message text of a syslog message
+#                      %msg:::drop-last-lf%:  whole message text of a syslog message and drops its last line feed character
+#     COMPARE_OPERATION: contains, isequal, startswith, regex, ereregex, isempty
+# Select syslog messages which contain the string error in their message text
+:msg, contains, "error"
+
+# Selects syslog messages received from the host name host1
+:hostname, isequal, "host1"
+
+# Select syslog messages not containing any mention of the words fatal and error with any or no text between them, e.g, fatal lib error
+:msg, !regex, "fatal .* error"
+
+# Expression-based filters: if EXPRESSION then ACTION else ACTION
+# Expression examples: $msg startswith 'DEVNAME'
+#                      $syslogfacility-text == 'local0'
+#                      $msg startswith 'DEVNAME' or $syslogfacility-text == 'local0'
+# To split log files created by a program called prog1  into two files based on the presence of the "test" string in the message
+if $programname == 'prog1' then {
+   action(type="omfile" file="/var/log/prog1.log")
+   if $msg contains 'test' then
+     action(type="omfile" file="/var/log/prog1test.log")
+   else
+     action(type="omfile" file="/var/log/prog1notest.log")
+}
+
+
+### ACTIONs
+# Saving syslog messages to log files: FILTER PATH
+#     By default, the log file is synchronized every time a syslog message is generated
+#     To omit syncing (can losemessages if system terminates right after a write attempt: FILTER -PATH
+#   Dynamic file paths can differ according to the received message: FILTER ?DynamicFile
+#       To generate a unique filename for each syslog message:
+#           $template DynamicFile,"/var/log/test_logs/%timegenerated%-test.log"
+#           *.* ?DynamicFile
+# Sending syslog messages over the network to remote host: @[(zNUMBER)]HOST:[PORT]
+#     @: syslog messages are forwarded to a host using the UDP
+#     @@: syslog messages are forwarded to a host using the TCP
+#     zNUMBER: enable zlib compression with compression level NUMBER, from 1 – lowest to 9 – maximum
+#     Default port 514
+# Output channels: primarily used to specify the maximum size a log file can grow to
+#     $outchannel NAME, FILE_NAME, MAX_SIZE, ACTION
+#     NAME: the name of the output channel.
+#     FILE_NAME: the name of the output file; output channels can write only into files, not pipes, terminal, or other kind of output
+#     MAX_SIZE: maximum size the specified file
+#     ACTION: the action that is taken when the maximum size, defined in MAX_SIZE, is hit
+#   To use the defined output channel as an action inside a rule:
+#     FILTER :omfile:$NAME
+# Sending syslog messages to specific users: FILTER user1,user2,user3
+# Executing a program: FILTER ^EXECUTABLE; TEMPLATE
+#     EXECUTABLE: the4 program to be executed
+#     TEMPLATE: the name of the formatting template
+#   Modify and format syslog message with template:
+#     $template TEMPLATE_NAME,"text %PROPERTY% more text", [OPTION]
+#     OPTION: specifies any options that modify the template functionality;
+#             currently supported template options are sql and stdsql, which are used for formatting the text as an SQL query
+# Storing syslog messages in a database: :PLUGIN:DB_HOST,DB_NAME,DB_USER,DB_PASSWORD;[TEMPLATE]
+# Discarding syslog messages: FILTER ~
+# Specifying Multiple Actions: write each action on a separate line and precede it with an ampersand (&) 
+#     FILTER ACTION
+#     & ACTION
+#     & ACTION
+#
+
+# Output channel log rotation: when test_log.log reaches 100 MB, execute /home/admin/log_rotation_script
+$outchannel log_rotation, /var/log/test_log.log, 104857600, /home/admin/log_rotation_script
+*.* :omfile:$log_rotation
+
+###### rsyslog configuration advanced format -- RainerScript
+# https://www.rsyslog.com/doc/v8-stable/rainerscript/index.html
+
+
+###### Log rotation
+# https://linux.die.net/man/8/logrotate
+# Config file: /etc/logrotate.conf example
+# rotate log files weekly
+weekly
+# keep 4 weeks worth of backlogs
+rotate 4
+# uncomment this if you want your log files compressed
+compress
+
+# Create a separate configuration file for any specific log file in the /etc/logrotate.d/ directory
+# Settings specified here override the global settings
+# Example file:
+#   each log will not be rotated until it reaches 10MB
+#   compress and delaycompress are used to tell that all rotated logs, with the exception of the most recent one, should be compressed
+$   send an email to root when rotation happens
+/var/log/messages {
+    rotate 5
+    weekly
+    size 10M
+    compress
+    delaycompress
+    postrotate
+        echo "A rotation just took place." | mail root
+    endscript
+}
