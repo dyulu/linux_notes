@@ -387,7 +387,63 @@ Repeat from step 2 onwards if you have marked more than one commit for edit
 
 # Amending the message of older or multiple commit messages
 git rebase -i HEAD~n     # display a list of the last n commits in your default text editor
-Change the work pick to reword at the start of the line of the commit(s)
+Change the word pick to reword at the start of the line of the commit(s)
 Save and close the commit list file
 In each resulting commit file, type the new commit message, save the file, and close it.
 In case the commits have been pushed before, force-push the amended commits: git push --force-with-lease
+
+# Commands:
+# p, pick <commit> = use commit
+# r, reword <commit> = use commit, but edit the commit message
+# e, edit <commit> = use commit, but stop for amending
+# s, squash <commit> = use commit, but meld into previous commit
+# f, fixup <commit> = like "squash", but discard this commit's log message
+# x, exec <command> = run command (the rest of the line) using shell
+# b, break = stop here (continue rebase later with 'git rebase --continue')
+# d, drop <commit> = remove commit
+# l, label <label> = label current HEAD with a name
+# t, reset <label> = reset HEAD to a label
+# m, merge [-C <commit> | -c <commit>] <label> [# <oneline>]
+# .       create a merge commit using the original merge commit's
+# .       message (or the oneline, if no original merge commit was
+# .       specified). Use -c <commit> to reword the commit message.
+
+# Automate interactive rebases
+Two ways to combine commits: fixup and squash
+Corresponding commits: --fixup and --squash
+    git commit --fixup commit_to_be_fixed_up     # specify commit with sha or :/words_from_first_line_of_commit_message
+Act upon commits with a message that begins fixup! or squash!, and still open editor like a regular interactive rebase
+    git rebase --interactive --autosquash
+
+#### Rebasing branch
+# Reapply commits on feature branch to main branch
+git checkout feature
+git rebase main
+# then, go back to the main branch and do a fast-forward merge
+git checkout main
+git merge feature
+
+# In case of rebase conflicts
+git am --show-current-patch   # See the failed patch
+git add/rm <conflicted_files> # Resolve conflicts manually, mark them as resolved with git add/rm, then git rebase --continue
+git rebase --continue         # Fix the conflicts and continue
+git rebase --skip             # Skip the commit that caused the conflicts
+git rebase --abort            # Check out the original branch and stop the rebase
+git push --force-with-lease   # Push to remote
+
+#### Work flow for creating a feature/my-test off the current main
+# Clone test repo into directory my-test-base, a snapshot of current main
+git clone https://github.com/dyulu/test.git my-test-base
+# Create remote my-test-base branch
+git push --force-with-lease -v origin HEAD:my-test-base
+# Clone my-test-base branch, starting work off the snapshot
+git clone -b my-test-base https://github.com/dyulu/test.git my-test-base
+# Check out my-test branch based off my-test-base
+git checkout -b my-test
+# Do work and then create remote feature/my-test branch
+git push --force-with-lease -v origin HEAD:feature/my-test    # git pull origin feature/my-test
+git config --list
+
+# Push local branch to remote branch with a different name
+git push  <REMOTENAME> <LOCALBRANCHNAME>:<REMOTEBRANCHNAME>
+git push -v -u origin HEAD:feature/new-branch  # -v, --verbose; -u, --set-upstream; see git config --list: branch.<name>.merge
