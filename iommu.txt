@@ -1,0 +1,72 @@
+# https://vfio.blogspot.com/2014/08/iommu-groups-inside-and-out.html
+# IOMMU (input–output memory management unit): a MMU that connects a DMA-capable I/O bus to the main memory
+# The IOMMU maps a device-visible virtual address (I/O virtual address or IOVA) to a physical memory address
+# Without an IOMMU, all devices share a flat view of physical memory without any memory translation operation
+
+# PCIe specifications allow PCIe devices to communicate with each other directly, i.e., peer-to-peer transactions, thereby escaping the IOMMU
+# ACS (Access Control Services) is able to tell whether these peer-to-peer transactions are possible between devices, and can disable them
+
+CONFIG_INTEL_IOMMU_DEFAULT_ON=y
+# CONFIG_INTEL_IOMMU_DEFAULT_OFF is not set
+
+# https://www.intel.com/content/www/us/en/developer/articles/technical/memory-in-dpdk-part-2-deep-dive-into-iova.html
+IOVA as Physical Addresses (PA) Mode
+IOVA as Virtual Addresses (VA) Mode
+Which IOVA Mode to Use: override the IOVA mode with an EAL flag (applicable to DPDK 17.11 and later) by using the --iova-mode
+User Space IO (UIO) Drivers
+VFIO Kernel Driver
+
+# https://github.com/pavolelsig/IOMMU-viewer/blob/master/iommu_viewer.sh
+$ ls -l /sys/kernel/iommu_groups/108
+total 0
+drwxr-xr-x 2 root root    0 Mar 20 09:27 devices
+-r--r--r-- 1 root root 4096 Mar 20 09:59 reserved_regions
+-r--r--r-- 1 root root 4096 Mar 20 09:59 type
+$ ls -l /sys/kernel/iommu_groups/108/devices
+total 0
+lrwxrwxrwx 1 root root 0 Mar 20 09:59 0000:64:0a.3 -> ../../../../devices/pci0000:64/0000:64:0a.3
+$ find /sys/kernel/iommu_groups/ -type d
+/sys/kernel/iommu_groups/
+/sys/kernel/iommu_groups/108
+/sys/kernel/iommu_groups/108/devices
+$ find /sys/kernel/iommu_groups/ -type f
+/sys/kernel/iommu_groups/108/type
+/sys/kernel/iommu_groups/108/reserved_regions
+$ find /sys/kernel/iommu_groups/ -type l
+/sys/kernel/iommu_groups/108/devices/0000:64:0a.3
+$ find /sys/kernel/iommu_groups/ -type l | cut -d '/' -f 5,7
+108/0000:64:0a.3
+$ find /sys/kernel/iommu_groups/ -type l | cut -d '/' -f 5,7 --output-delimiter='-'
+108-0000:64:0a.3
+# IOMMU group#
+$ echo '108-0000:64:0a.3' | cut -d '-' -f 1
+108
+# PCI address: domain:bus:device:function
+$ echo '108-0000:64:0a.3' | cut -d '-' -f 2
+0000:64:0a.3
+$ echo '108-0000:64:0a.3' | cut -d ':' -f 2,3,4
+64:0a.3
+$ lspci -k -s '64:0a.3'
+64:0a.3 System peripheral: Intel Corporation Sky Lake-E Integrated Memory Controller (rev 04)
+	Subsystem: Intel Corporation Sky Lake-E Integrated Memory Controller
+$ lspci -k -s '0000:64:0a.3'
+64:0a.3 System peripheral: Intel Corporation Sky Lake-E Integrated Memory Controller (rev 04)
+	Subsystem: Intel Corporation Sky Lake-E Integrated Memory Controller
+$ lspci -k -s '0000:68:00.0'
+68:00.0 Non-Volatile memory controller: Samsung Electronics Co Ltd NVMe SSD Controller 172Xa/172Xb (rev 01)
+	Subsystem: Samsung Electronics Co Ltd NVMe SSD Controller 172Xa/172Xb
+	Kernel driver in use: nvme
+	Kernel modules: nvme
+$ lspci -nn | grep '0000:64:0a.3'
+$ lspci -nn | grep '64:0a.3'
+64:0a.3 System peripheral [0880]: Intel Corporation Sky Lake-E Integrated Memory Controller [8086:2043] (rev 04)
+$ lspci -nn | grep '64:0a.3' | cut -d ' ' -f 2-
+System peripheral [0880]: Intel Corporation Sky Lake-E Integrated Memory Controller [8086:2043] (rev 04)
+$ ./iommu_viewer.sh
+Group:  108  0000:64:0a.3 System peripheral [0880]: Intel Corporation Sky Lake-E Integrated Memory Controller [8086:2043] (rev 04)
+Group:  145  0000:68:00.0 Non-Volatile memory controller [0108]: Samsung Electronics Co Ltd NVMe SSD Controller 172Xa/172Xb [144d:a822] (rev 01)   Driver: nvme
+
+# Boot arg: intel_iommu=off|on
+cat /proc/cmdline | grep iommu
+
+journalctl -b | grep iommu
