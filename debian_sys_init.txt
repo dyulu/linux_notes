@@ -1,0 +1,191 @@
+https://www.debian.org/doc/manuals/debian-reference/ch03.en.html
+
+# The boot strap process of the typical PC platform with the default installation:
+Stage 1: the UEFI
+   UEFI defines a boot manager, which checks the boot configuration and based on its settings, then executes the specified OS boot loader
+   On the legacy PC system, BIOS stored in the MBR may be used instead
+
+Stage 2: the boot loader
+   The boot loader loads the system kernel image and the initrd image to the memory and hands control over to them
+   Debian uses the Linux kernel as the default system kernel. The initrd image is initramfs image
+
+Stage 3: the mini-Debian system
+   It runs the system kernel with its root filesystem on the memory
+   This is an optional preparatory stage of the boot process
+   The "/init" program is executed as the first program in this root filesystem on the memory.
+   The /init program initializes the kernel in user space and hands control over to the next stage
+   The "/init" program is a shell script program if initramfs was created by initramfs-tools
+       Can interrupt this part of the boot process to gain root shell by providing the following to the kernel boot parameter:
+          # grep break /init provided by initramfs-tools
+          break=top
+          break=modules
+          break=premount
+          break=mount
+          break=mountroot
+          break=cpioroot
+          break=bottom
+          break=init
+      Commands available in this mini-Debian system are stripped down ones and mainly provided by a GNU tool called busybox
+   The "/init" program is a binary systemd program if initramfs was created by dracut
+      Commands available in this mini-Debian system are stripped down systemd environment
+
+Stage 4: the normal Debian system
+   The system kernel for the mini-Debian system continues to run in this environment
+   The root filesystem is switched from the one on the memory to the one on the real hard disk filesystem
+   The init program is executed as the first program with PID=1 to perform the main boot process of starting many programs
+   The default file path for the init program is "/sbin/init" but it can be changed by the kernel boot parameter as "init=/path/to/init_program"
+   "/sbin/init" is symlinked to "/lib/systemd/systemd" after Debian 8 Jessie
+       The actual init command on your system can be verified by the "ps --pid 1 -f" command
+
+# Systemd init
+The systemd init process spawns processes in parallel based on the unit configuration files
+The spawned processes are placed in individual Linux control groups named after the unit which they belong to in the private systemd hierarchy
+The unit configuration files are loaded from a set of paths (see systemd-system.conf(5)) as follows:
+    "/lib/systemd/system": OS default configuration files
+    "/etc/systemd/system": system administrator configuration files which override the OS default configuration files
+    "/run/systemd/system": run-time generated configuration files which override the installed configuration files
+
+# initramfs init
+# https://salsa.debian.org/kernel-team/initramfs-tools/-/blob/master/init
+# https://www.apt-browse.org/browse/ubuntu/trusty/main/amd64/udev/204-5ubuntu20/file/usr/share/initramfs-tools/scripts/init-top/udev
+# https://www.apt-browse.org/browse/ubuntu/trusty/main/amd64/udev/204-5ubuntu20/file/usr/share/initramfs-tools/scripts/init-bottom/udev
+maybe_break top
+run_scripts /scripts/init-top
+    /scripts/init-top/all_generic_ide
+    /scripts/init-top/blacklist       # create /etc/modprobe.d/initramfs.conf from blacklist in /proc/cmdline; not the same as module_blacklist
+    /scripts/init-top/keymap
+    /scripts/init-top/udev            # SYSTEMD_LOG_LEVEL=$log_level /lib/systemd/systemd-udevd --daemon --resolve-names=never
+                                      # udevadm trigger --type=subsystems --action=add
+                                      # udevadm trigger --type=devices --action=add
+                                      # udevadm settle || true
+maybe_break modules
+load_modules                          # load modules specified in /conf/modules, using /sbin/modprobe
+maybe_break premount
+run_scripts /scripts/init-premount    # does not exist by default
+maybe_break mount
+. /scripts/local
+. /scripts/nfs
+. /scripts/${BOOT}                    # default BOOT to local
+parse_numeric "${ROOT}"               # convert ROOT, default to /dev/disk/by-label/BOOTDEVICE, to ROOT="/dev/block/${major}:${minor}" in case needed
+maybe_break mountroot
+mount_top                             # default to local_top
+mount_premount                        # default to local_premount: local_device_setup -> wait_for_udev
+mountroot                             # default to local_mount_root: checkfs and mount
+mount_bottom                          # default to local_bottom
+nfs_bottom
+local_bottom
+maybe_break bottom
+run_scripts /scripts/init-bottom
+    /scripts/init-bottom/udev          # udevadm control --exit
+mount -n -o move /run ${rootmnt}/run
+if ! validate_init "${init}" ; then                            # /sbin/run-init -n "${rootmnt}" ${init}
+	panic "No init found. Try passing init= bootarg."      # init from /proc/cmdline; otherwise /sbin/init, which is symlinked to systemd
+fi
+maybe_break init
+mount -n -o move /sys ${rootmnt}/sys
+mount -n -o move /proc ${rootmnt}/proc
+exec run-init ${drop_caps} "${rootmnt}" "${init}" "$@" <"${rootmnt}/dev/console" >"${rootmnt}/dev/console" 2>&1
+echo "Something went badly wrong in the initramfs."
+panic "Please file a bug on initramfs-tools."
+
+# Create initramfs
+# /etc/initramfs-tools/initramfs.conf:           configuration file for mkinitramfs
+# /etc/initramfs-tools/update-initramfs.conf:    configuration file for update-initramfs
+# mkinitramfs:      low-level tool for generating an initramfs image; for advanced usage
+# update-initramfs: manages your initramfs images on your local box, in /boot/; calls mkinitramfs with the relevant parameters
+# /var/lib/kdump/initramfs-tools/initramfs.conf:        configuration file for mkinitramfs for kdump
+# /var/lib/kdump/initramfs-tools/update-initramfs.conf: configuration file for update-initramfs for kdump
+# /etc/initramfs-tools/modules: modules to be included in initramfs
+
+#### Example initramfs.conf
+$ cat /etc/initramfs-tools/initramfs.conf 
+#
+# initramfs.conf
+# Configuration file for mkinitramfs(8). See initramfs.conf(5).
+#
+# Note that configuration options from this file can be overridden
+# by config files in the /etc/initramfs-tools/conf.d directory.
+
+#
+# MODULES: [ most | netboot | dep | list ]
+#
+# most - Add most filesystem and all harddrive drivers.
+#
+# dep - Try and guess which modules to load.
+#
+# netboot - Add the base modules, network modules, but skip block devices.
+#
+# list - Only include modules from the 'additional modules' list
+#
+MODULES=list
+
+#
+# BUSYBOX: [ y | n | auto ]
+#
+# Use busybox shell and utilities.  If set to n, klibc utilities will be used.
+# If set to auto (or unset), busybox will be used if installed and klibc will
+# be used otherwise.
+#
+BUSYBOX=auto
+
+#
+# KEYMAP: [ y | n ]
+#
+# Load a keymap during the initramfs stage.
+#
+KEYMAP=n
+
+#
+# COMPRESS: [ gzip | bzip2 | lz4 | lzma | lzop | xz | zstd ]
+#
+COMPRESS=gzip
+
+#
+# DEVICE: ...
+#
+# Specify a specific network interface, like eth0
+# Overridden by optional ip= or BOOTIF= bootarg
+#
+DEVICE=
+
+#
+# NFSROOT: [ auto | HOST:MOUNT ]
+#
+NFSROOT=auto
+
+#
+# RUNSIZE: ...
+#
+# The size of the /run tmpfs mount point, like 256M or 10%
+# Overridden by optional initramfs.runsize= bootarg
+#
+RUNSIZE=10%
+
+#
+# FSTYPE: ...
+#
+# The filesystem type(s) to support, or "auto" to use the current root
+# filesystem type
+#
+FSTYPE=auto
+
+#### Example of update-initramfs.conf
+$ cat /etc/initramfs-tools/update-initramfs.conf 
+#
+# Configuration file for update-initramfs(8)
+#
+
+#
+# update_initramfs [ yes | all | no ]
+#
+# Default is yes
+# If set to all update-initramfs will update all initramfs
+# If set to no disables any update to initramfs beside kernel upgrade
+update_initramfs=yes
+
+#
+# backup_initramfs [ yes | no ]
+#
+# Default is no
+# If set to no leaves no .bak backup files.
+backup_initramfs=no
