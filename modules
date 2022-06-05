@@ -71,3 +71,181 @@ make will create hello.ko file.
 
 # dmesg | tail -1
 [ 8707.989819] Cleaning up module.
+
+====
+
+# https://wiki.archlinux.org/title/Kernel_module
+
+# Load Kernel modules automatically on boot
+#    Put an entry in /etc/modules-load.d/modules.conf, one <modulename> per line
+#    If module options/parameters are required, create a file with the convention: <priority>-<modulename>.conf
+#        and put options/parameters in that file
+#    Check if systemd service loaded the module:
+#        systemctl status systemd-modules-load.service
+#        journalctl -u systemd-modules-load
+#        journalctl -b _PID=xxx          # PID is shown by the above-mentioned cmd 
+# Note: Most kernel modules are loaded by the system automatically when a device is detected
+#       or user space requests specific functionality. Thus, adding modules manually to
+#       /etc/modules-load.d/ is rarely required.
+
+# Blacklist Kernel modules with modprobe during boot process
+#    Put an entry in /etc/modprobe.d/blacklist.conf: blacklist <modulename>
+# To blacklist a module, add the blacklist MODULE_NAME line to the /etc/modprobe.d/blacklist.conf
+# This is not implemented by the kernel. It is implemented by modprobe
+# This exists to prevent modules being automatically loaded by 1) udev, when it detects hardware,
+#    2) kernel calls of request_module() which load modules on-demand, if the request_module() call
+#    is for a module alias like char-major-10-237 or net-pf-10-proto-132.
+#    Note that udev's usage is also a case of loading modules using their aliases. E.g. the alias
+#        scsi:t-0x01*, is used for a scsi device which requires the st driver module).
+#    There might also be a few uses of request_module() inside the kernel which request a module
+#        by name, not by an alias. request_module() does not pass -b when it runs modprobe.
+#        mobprobe: -b, --use-blacklist
+# Notes:
+#     You can still load blacklisted kernel modules manually using the insmod or modprobe tools
+#     This does not affect autoloading of modules by the kernel
+#     The modules listed in /etc/initramfs-tools/modules aren't subject to blacklists
+#     /etc/modprobe.conf, if present, supersedes anything in /etc/modprobe.d/* (unless you add include /etc/modprobe.d)
+#     Scripts which call modprobe with a module name, and do not pass -b to modprobe, are not affected by the blacklist.
+#     The blacklist is also not consulted when modprobe loads a kernel module as a requirement of another module. 
+# Check blacklist in /etc/modprobe.d/*.conf, /usr/lib/modprobe.d/*.conf or /run/modprobe.d/*.conf
+
+# Linux bootarg: module_blacklist=  [KNL] Do not load a comma-separated list of modules. 
+#                modprobe.blacklist=MODULE_NAME
+# In more recent releases, you need to use the install directive in your blacklist file
+#     install <modulename> /bin/false
+# Example: initcall_blacklist=nvme_init
+#          module_blacklist=nvme,nvme_core
+# After making changes in /etc/modprobe.d/blacklist.conf,
+#     sudo depmod -ae
+#     sudo update-initramfs -u
+
+# https://linux.die.net/man/5/modprobe.conf
+# modprobe.d, modprobe.conf
+#   alias wildcard modulename
+#   options modulename option...
+#   install modulename command...: tells modprobe to run your command instead of inserting the module in the kernel as normal
+#   remove modulename command...
+#   blacklist modulename
+
+# initramfs module settings: modules to load during initramfs
+/etc/initramfs-tools/modules
+/usr/share/initramfs-tools/modules.d/*
+# Specify MODULES=list so modules to load during initramfs are from the above-mentioned files
+$ cat /etc/initramfs-tools/initramfs.conf
+#
+# Note that configuration options from this file can be overridden
+# by config files in the /etc/initramfs-tools/conf.d directory.
+#
+# MODULES: [ most | netboot | dep | list ]
+#
+# most - Add most filesystem and all harddrive drivers.
+#
+# dep - Try and guess which modules to load.
+#
+# netboot - Add the base modules, network modules, but skip block devices.
+#
+# list - Only include modules from the 'additional modules' list
+#
+MODULES=list
+
+
+# Loading modules on demand
+# To request the loading of a module, call request_module:
+# int request_module(const char *module_name);
+
+# systemctl status kmod
+$ cat /lib/systemd/system/systemd-modules-load.service
+[Unit]
+Description=Load Kernel Modules
+Documentation=man:systemd-modules-load.service(8) man:modules-load.d(5)
+DefaultDependencies=no
+Conflicts=shutdown.target
+Before=sysinit.target shutdown.target
+ConditionCapability=CAP_SYS_MODULE
+ConditionDirectoryNotEmpty=|/lib/modules-load.d
+ConditionDirectoryNotEmpty=|/usr/lib/modules-load.d
+ConditionDirectoryNotEmpty=|/usr/local/lib/modules-load.d
+ConditionDirectoryNotEmpty=|/etc/modules-load.d
+ConditionDirectoryNotEmpty=|/run/modules-load.d
+ConditionKernelCommandLine=|modules-load
+ConditionKernelCommandLine=|rd.modules-load
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/lib/systemd/systemd-modules-load
+TimeoutSec=90s
+
+# systemctl status systemd-udevd.service
+$ cat /lib/systemd/system/systemd-udevd.service
+[Unit]
+Description=Rule-based Manager for Device Events and Files
+Documentation=man:systemd-udevd.service(8) man:udev(7)
+DefaultDependencies=no
+After=systemd-sysusers.service systemd-hwdb-update.service
+Before=sysinit.target
+ConditionPathIsReadWrite=/sys
+[Service]
+DeviceAllow=block-* rwm
+DeviceAllow=char-* rwm
+Type=notify
+# Note that udev will reset the value internally for its workers
+OOMScoreAdjust=-1000
+Sockets=systemd-udevd-control.socket systemd-udevd-kernel.socket
+Restart=always
+RestartSec=0
+ExecStart=/lib/systemd/systemd-udevd
+ExecReload=udevadm control --reload --timeout 0
+KillMode=mixed
+TasksMax=infinity
+PrivateMounts=yes
+ProtectClock=yes
+ProtectHostname=yes
+MemoryDenyWriteExecute=yes
+RestrictAddressFamilies=AF_UNIX AF_NETLINK AF_INET AF_INET6
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+IPAddressDeny=any
+WatchdogSec=3min
+
+# The hotplug kernel subsystem dynamically handles the addition and removal of devices, by loading the appropriate drivers
+#     and by creating the corresponding device files (with the help of udevd)
+# The kernel has a database that associates each device ID with the required driver.
+# This database is used during boot to load all the drivers for the peripheral devices detected on the different buses,
+#    and also when an additional hotplug device is connected.
+# Once the device is ready for use, a message is sent to udevd so it will be able to create the corresponding entry in /dev/
+# udevd stores logs in /var/log/daemon.log
+# udevadm control --log-priority=err          // default
+# udevadm control --log-priority=info         // increase verbosity
+# udev_device_get_driver
+
+$ cat /etc/modprobe.d/blacklist.conf
+install nvme echo "install nvme"
+install nvme-core /bin/false
+$ modprobe nvme
+modprobe: ERROR: ../libkmod/libkmod-module.c:990 command_do() Error running install command '/bin/false' for module nvme_core: retcode 1
+modprobe: ERROR: could not insert 'nvme': Invalid argument
+$ lsmod | grep nvme
+$
+
+
+$ cat /etc/modprobe.d/blacklist.conf
+install nvme echo "install nvme"
+# install nvme-core /bin/false
+$ modprobe nvme
+install nvme
+$ lsmod | grep nvme
+nvme_core              90112  0
+t10_pi                 16384  2 sd_mod,nvme_core
+$ modprobe -r nvme-core
+$ lsmod | grep nvme
+$
+
+
+$ cat /etc/modprobe.d/blacklist.conf
+install nvme echo "install nvme"
+install nvme-core /bin/true
+$ modprobe nvme
+install nvme
+$ lsmod | grep nvme
+$
