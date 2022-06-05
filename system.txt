@@ -209,3 +209,174 @@ Facility code     Keyword    Description
 16                local0     Local use 0 (local0)
 17                local1     Local use 1 (local1)
 18                local2     Local use 2 (local2)
+
+====
+
+systemd-analyze -h
+systemd-analyze [OPTIONS...] {COMMAND} ...
+
+Profile systemd, show unit dependencies, check unit files.
+
+  -h --help                Show this help
+     --version             Show package version
+     --no-pager            Do not pipe output into a pager
+     --system              Operate on system systemd instance
+     --user                Operate on user systemd instance
+     --global              Operate on global user configuration
+  -H --host=[USER@]HOST    Operate on remote host
+  -M --machine=CONTAINER   Operate on local container
+     --order               Show only order in the graph
+     --require             Show only requirement in the graph
+     --from-pattern=GLOB   Show only origins in the graph
+     --to-pattern=GLOB     Show only destinations in the graph
+     --fuzz=SECONDS        Also print also services which finished SECONDS
+                           earlier than the latest in the branch
+     --man[=BOOL]          Do [not] check for existence of man pages
+     --generators[=BOOL]   Do [not] run unit generators (requires privileges)
+
+Commands:
+  time                     Print time spent in the kernel
+  blame                    Print list of running units ordered by time to init
+  critical-chain [UNIT...] Print a tree of the time critical chain of units
+  plot                     Output SVG graphic showing service initialization
+  dot [UNIT...]            Output dependency graph in man:dot(1) format
+  log-level [LEVEL]        Get/set logging threshold for manager
+  log-target [TARGET]      Get/set logging target for manager
+  dump                     Output state serialization of service manager
+  cat-config               Show configuration file and drop-ins
+  unit-paths               List load directories for units
+  syscall-filter [NAME...] Print list of syscalls in seccomp filter
+  verify FILE...           Check unit files for correctness
+  calendar SPEC...         Validate repetitive calendar time events
+  service-watchdogs [BOOL] Get/set service watchdog state
+  timespan SPAN...         Validate a time span
+  security [UNIT...]       Analyze security of unit
+
+See the systemd-analyze(1) man page for details.
+
+# all the major browsers can be used to open SVG file
+# dot tool: sudo apt-get install graphviz
+systemd-analyze dot | dot -Tpng -o systemd-dependency.png
+systemd-analyze dot | dot -Tsvg -o systemd-dependency.png
+
+systemd-analyze dot kdump-tools.service
+systemd-analyze verify default.target
+
+==== Documentation of systemd unit files
+
+https://www.freedesktop.org/software/systemd/man/systemd.service.html
+https://www.freedesktop.org/software/systemd/man/systemd.unit.html
+
+# If the empty string is assigned to this option, the list of commands to start is reset
+#    i.e., prior assignments of this option will have no effect
+# Assignment is additive. If not reset, a later assignment will just be added to previous assignment.
+ExecStart=
+
+# Prefix "-" indicates that command failure is recorded but considered equivlent to success
+# Prefix "@": 2nd specified token is passed as "argv[0]", followed by further arguments specified
+# Prefix ":": environment variable substitution is not applied
+# Prefix "+": process is executed with full privileges
+ExecStart=-/path/to/executable
+
+# Prefix "-" indicates that if the file does not exist, it will not be read and no error or warning message is logged
+EnvironmentFile=-/path/to/file
+
+# Specifiers
+%a: architecture
+%h: user home directory
+%H: hostname
+%i: instance name. For instantiated units this is the string between the first "@" and the type suffix. Empty for non-instantiated units.
+%I: unescaped instance name. Same as "%i", but with escaping undone.
+
+==== Logs
+
+# Log rotate
+journalctl --rotate
+
+# View latest log: -r reverse option
+journalctl -r
+
+# Get current log level: default info
+systemd-analyze get-log-level
+systemctl log-level
+
+# Set log level to debug
+systemd-analyze set-log-level debug
+systemctl log-level debug
+
+# Clear logs older than 10 days
+journalctl --vacuum-time=10d
+
+# Keep 2G worth og logs. Check size with: du -hs /var/log/journal OR journalctl --disk-usage
+journalctl --vacuum-size=2G
+
+# Limit number of log files to 5
+journalctl --vacuum-files=5
+
+# in service file
+[service]
+SyslogLevel=debug
+StandardOutput=journal+console
+StandardError=journal+console
+
+==== Template unit file
+
+Template unit files allow systemd to address multiple units from a single configuration file.
+    <service_name>@.service
+
+Call a systemd template unit file using a special format
+    <service_name>@<argument>.service
+    <argument>: text (string) passed to systemd to use in the unit file.
+    Two identifiers are used in the unit file for passing the instance argument.
+        %i passes the argument, specially formatted (escaped)
+        %I passes the argument verbatim without escaping
+
+
+$ cat /lib/systemd/system/modprobe@.service
+[Unit]
+Description=Load Kernel Module %i
+DefaultDependencies=no
+Before=sysinit.target
+Documentation=man:modprobe(8)
+ConditionCapability=CAP_SYS_MODULE
+[Service]
+Type=oneshot
+ExecStart=-/sbin/modprobe -abq %I
+
+# Install nvme module with the following
+$ systemctl start modprobe@nvme.service
+
+==== Override systemd unit files
+
+# The systemd files that come with the software packages, usually get installed in a path like
+#     /usr/lib/systemd/system/ (Arch, Manjaro) or
+#     /lib/systemd/system/ (Debian, Ubuntu, Mint) and
+#     not in /etc/systemd/system
+# The systemd files in /etc/systemd/system/ take precedence over the other paths mentioned above
+# To make changes to a systemd file from a software package:
+#     change it directly, e.g., in /lib/systemd/system/: a update of the package will override the changes
+#     copy it to /etc/systemd/system and change it there: it takes precedence over the original file in other path
+#     systemctl edit foo.service: this creates /etc/systemd/system/foo.service.d/override.conf 
+#                                 the name can be something different, e.g., foo.conf 
+#     create a config package to install an override.conf in /etc/systemd/system/foo.service.d/ and install the package
+
+==== Core dump cmdline
+
+Can add systemd.unit=kdump-tools-dump.service to normal boot cmdline
+
+https://manpages.debian.org/testing/systemd/systemd.1.en.html
+systemd.unit=, rd.systemd.unit=:
+    Overrides the unit to activate on boot. Defaults to default.target.
+    This may be used to temporarily boot into a different boot unit, for example rescue.target or emergency.service.
+    See systemd.special(7) for details about these units.
+    The option prefixed with "rd." is honored only in the initial RAM disk (initrd), while the one that is not prefixed only in the main system.
+
+systemd.dump_core:
+    Takes a boolean argument or enables the option if specified without an argument.
+    If enabled, the systemd manager (PID 1) dumps core when it crashes. Otherwise, no core dump is created. Defaults to enabled.
+
+systemd.crash_shell:
+    Takes a boolean argument or enables the option if specified without an argument.
+    If enabled, the system manager (PID 1) spawns a shell when it crashes, after a 10s delay.
+    Otherwise, no shell is spawned.
+    Defaults to disabled, for security reasons, as the shell is not protected by password authentication.
