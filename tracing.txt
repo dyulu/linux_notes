@@ -1,0 +1,228 @@
+Linux Tracing Technologies:
+https://www.kernel.org/doc/html/latest/trace/index.html
+https://www.kernel.org/doc/Documentation/trace/ftrace.txt
+
+$ mount | grep tracefs
+tracefs on /sys/kernel/tracing type tracefs (rw,nosuid,nodev,noexec,relatime)
+tracefs on /sys/kernel/debug/tracing type tracefs (rw,nosuid,nodev,noexec,relatime)
+$ mount -t debugfs debugfs /sys/kernel/debug
+$ mount | grep debugfs
+debugfs on /sys/kernel/debug type debugfs (rw,nosuid,nodev,noexec,relatime)
+$ ls  /sys/kernel/debug/tracing/
+README                      kprobe_events           set_ftrace_pid
+available_events            kprobe_profile          set_graph_function
+available_filter_functions  max_graph_depth         set_graph_notrace
+available_tracers           options                 timestamp_mode
+buffer_percent              per_cpu                 trace
+buffer_size_kb              printk_formats          trace_clock
+buffer_total_size_kb        saved_cmdlines          trace_marker
+current_tracer              saved_cmdlines_size     trace_marker_raw
+dyn_ftrace_total_info       saved_tgids             trace_options
+dynamic_events              set_event               trace_pipe
+enabled_functions           set_event_notrace_pid   tracing_cpumask
+error_log                   set_event_pid           tracing_on
+events                      set_ftrace_filter       tracing_thresh
+free_buffer                 set_ftrace_notrace      uprobe_events
+instances                   set_ftrace_notrace_pid  uprobe_profile
+
+# Directories under /sys/kernel/debug/tracing/
+$ ls -d /sys/kernel/debug/tracing/*/
+/sys/kernel/debug/tracing/events/     /sys/kernel/debug/tracing/options/
+/sys/kernel/debug/tracing/instances/  /sys/kernel/debug/tracing/per_cpu/
+
+$ ls  /sys/kernel/debug/tracing/events
+alarmtimer  ftrace        irq          neigh           rdma_core  tcp
+block       header_event  irq_matrix   net             regmap     thermal
+bridge      header_page   irq_vectors  nmi             rpm        timer
+cgroup      huge_memory   jbd2         oom             rseq       tipc
+clk         hwmon         kmem         page_isolation  rtc        tlb
+compaction  hyperv        kvm          page_pool       sched      udp
+cpuhp       i2c           kvmmmu       pagemap         scsi       vmscan
+dccp        i40e          kyber        percpu          sctp       vsyscall
+devlink     ib_cma        libata       power           signal     workqueue
+enable      ib_mad        mce          printk          skb        writeback
+exceptions  ib_umad       migrate      qdisc           smbus      x86_fpu
+ext4        initcall      mlx5         random          sock       xdp
+fib         intel_iommu   mmap         ras             spi        xen
+fib6        io_uring      module       raw_syscalls    sunrpc     xhci-hcd
+filelock    iomap         msr          rcu             swiotlb
+filemap     iommu         napi         rdma_cma        task
+
+#### Clear tracing ring buffer and enable tracing ####
+/sys/kernel/debug/tracing$ echo > trace
+/sys/kernel/debug/tracing$ echo 1 > tracing_on
+# Print the current content of the ring buffer
+/sys/kernel/debug/tracing$ cat trace
+# Do a consuming read on the ring buffer
+/sys/kernel/debug/tracing$ cat trace_pipe
+
+#### Tracing on multicore ####
+# One ringbuffer per cpu
+# Trace contains all events
+# The per_cpu directory contains a trace for each cpu
+# tracing_cpumask can limit tracing to specific cores
+/sys/kernel/debug/tracing$ ls per_cpu/cpu0
+buffer_size_kb  stats  trace  trace_pipe  trace_pipe_raw
+
+#### Tracer ####
+# available_tracers contains the tracers which are enabled in the kernel
+# configuration. The tracer is set by the current_tracer file:
+# function: Can turn all functions into trace events
+# function_graph: Similiar to function, but contains a call graph
+/sys/kernel/debug/tracing$ cat available_tracers
+function_graph function nop
+/sys/kernel/debug/tracing$ cat current_tracer
+nop
+
+####  Enable all events of the group sched
+/sys/kernel/debug/tracing$ echo 1 > events/sched/enable
+$ cat /sys/kernel/debug/tracing/trace_pipe
+
+#### NMI Trace Events: https://docs.kernel.org/trace/events-nmi.html ####
+$ cat /proc/interrupts | grep -e NMI -e PMI -e CPU0
+            CPU0       CPU1       CPU2       CPU3       
+ NMI:       6297      26010      26010      26010   Non-maskable interrupts
+ PMI:       6297      26010      26010      26010   Performance monitoring interrupts
+$ ls  /sys/kernel/debug/tracing/events/nmi
+enable  filter  nmi_handler
+$ ls -d /sys/kernel/debug/tracing/events/nmi/*/
+/sys/kernel/debug/tracing/events/nmi/nmi_handler/
+$ ls  /sys/kernel/debug/tracing/events/nmi/nmi_handler/
+enable  filter  format  id  trigger
+$ ls -d /sys/kernel/debug/tracing/events/nmi/nmi_handler/*/
+ls: cannot access '/sys/kernel/debug/tracing/events/nmi/nmi_handler/*/': No such file or directory
+
+# Enable NMI trace events
+$ cd /sys/kernel/debug/tracing/events/nmi/nmi_handler
+/sys/kernel/debug/tracing/events/nmi/nmi_handler$ cat format   # Each event has a specific format and parameters
+name: nmi_handler                                              # can put a filter on those parameters for recording a trace
+ID: 84
+format:
+	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
+	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
+	field:unsigned char common_preempt_count;	offset:3;	size:1;	signed:0;
+	field:int common_pid;	offset:4;	size:4;	signed:1;
+
+	field:void * handler;	offset:8;	size:8;	signed:0;
+	field:s64 delta_ns;	offset:16;	size:8;	signed:1;
+	field:int handled;	offset:24;	size:4;	signed:1;
+
+print fmt: "%ps() delta_ns: %lld handled: %d", REC->handler, REC->delta_ns, REC->handled
+/sys/kernel/debug/tracing/events/nmi/nmi_handler$ echo 1 > enable
+# See NMI trace events
+$ cat /sys/kernel/debug/tracing/trace_pipe
+   mytask_core_0-1603541 [000] d.Z. 1044877.720358: nmi_handler: perf_event_nmi_handler() delta_ns: 2480 handled: 1
+   mytask_core_0-1603541 [000] d.Z. 1044877.720359: nmi_handler: nmi_cpu_backtrace_handler() delta_ns: 164 handled: 0
+   mytask_core_0-1603541 [000] d.Z. 1044877.720362: nmi_handler: ghes_notify_nmi() delta_ns: 2752 handled: 0
+   mytask_core_1-1594058 [001] d.Z. 1044923.568096: nmi_handler: perf_event_nmi_handler() delta_ns: 1480 handled: 1
+   mytask_core_1-1594058 [001] d.Z. 1044923.568097: nmi_handler: nmi_cpu_backtrace_handler() delta_ns: 100 handled: 0
+   mytask_core_1-1594058 [001] d.Z. 1044923.568099: nmi_handler: ghes_notify_nmi() delta_ns: 1769 handled: 0
+   mytask_core_2-1594214 [002] d.Z. 1044924.576673: nmi_handler: perf_event_nmi_handler() delta_ns: 1207 handled: 1
+   mytask_core_2-1594214 [002] d.Z. 1044924.576673: nmi_handler: nmi_cpu_backtrace_handler() delta_ns: 96 handled: 0
+   mytask_core_2-1594214 [002] d.Z. 1044924.576675: nmi_handler: ghes_notify_nmi() delta_ns: 2026 handled: 0
+
+# Add a filter to NMI trace events
+# Can also do something like: echo 'handler==0xffffffffb2005ba0 && delta_ns > 1000000' > filter
+$ grep perf_event_nmi_handler /proc/kallsyms
+ffffffffb2005ba0 t perf_event_nmi_handler
+/sys/kernel/debug/tracing/events/nmi/nmi_handler$ echo 'handler==0xffffffffb2005ba0' > filter
+$ cat /sys/kernel/debug/tracing/trace_pipe
+   mytask_core_0-1604189 [000] d.Z. 1045318.887048: nmi_handler: perf_event_nmi_handler() delta_ns: 3335 handled: 1
+   mytask_core_1-1594058 [001] d.Z. 1045364.601932: nmi_handler: perf_event_nmi_handler() delta_ns: 1798 handled: 1
+   mytask_core_2-1594214 [002] d.Z. 1045365.610506: nmi_handler: perf_event_nmi_handler() delta_ns: 1565 handled: 1
+
+#### Set a trigger function for the function_graph tracer  to record specific functions and their childs ####
+$ grep nmi_handle /proc/kallsyms 
+ffffffff89005ba0 t perf_event_nmi_handler
+ffffffff8900af20 t perf_ibs_nmi_handler
+ffffffff89035730 T __traceiter_nmi_handler
+ffffffff890357a0 t perf_trace_nmi_handler
+ffffffff89035890 t trace_event_raw_event_nmi_handler
+ffffffff89035950 t trace_raw_output_nmi_handler
+ffffffff890359a0 T __register_nmi_handler
+ffffffff89035a80 T unregister_nmi_handler
+ffffffff89035b40 t nmi_handle
+ffffffff890647b0 t kgdb_nmi_handler
+ffffffff899e91da t nmi_handle.cold
+ffffffff89e00538 T __SCT__tp_func_nmi_handler
+# register_nmi_handler(NMI_UNKNOWN, hpwdt_pretimeout, 0, "hpwdt");
+# register_nmi_handler(NMI_SERR, hpwdt_pretimeout, 0, "hpwdt");
+# register_nmi_handler(NMI_IO_CHECK, hpwdt_pretimeout, 0, "hpwdt");
+# register_nmi_handler(NMI_LOCAL, crash_nmi_callback, NMI_FLAG_FIRST, "crash")
+# register_nmi_handler(NMI_LOCAL, ghes_notify_nmi, 0, "ghes")
+# register_nmi_handler(NMI_LOCAL, perf_event_nmi_handler, 0, "PMI");
+# register_nmi_handler(NMI_LOCAL, nmi_cpu_backtrace_handler, 0, "arch_bt");
+# register_nmi_handler(NMI_LOCAL, mce_raise_notify, 0, "mce_notify");
+# register_nmi_handler(NMI_LOCAL, wakeup_cpu0_nmi, 0, "wake_cpu0")
+
+/sys/kernel/debug/tracing$ grep nmi_handle available_filter_functions  
+perf_ibs_nmi_handler
+__traceiter_nmi_handler
+__register_nmi_handler
+unregister_nmi_handler
+nmi_handle
+kgdb_nmi_handler
+/sys/kernel/debug/tracing$ echo nmi_handle > set_graph_function
+/sys/kernel/debug/tracing$ echo  function_graph > current_tracer
+/sys/kernel/debug/tracing$ cat /sys/kernel/debug/tracing/trace_pipe | grep -e "^ 0)"    # Core 0 only
+ 0)               |    nmi_handle() {
+ 0)               |      perf_event_nmi_handler() {
+ 0)               |        intel_pmu_handle_irq() {
+ 0)   0.370 us    |          intel_bts_disable_local();
+ 0)   0.234 us    |          intel_pmu_drain_bts_buffer();
+ 0)   0.325 us    |          intel_bts_interrupt();
+ 0)   0.250 us    |          intel_pmu_lbr_read();
+ 0)               |          handle_pmi_common() {
+ 0)   0.495 us    |            x86_perf_event_update();
+ 0)               |            x86_perf_event_set_period() {
+ 0)   0.132 us    |              rcu_read_unlock_strict();
+ 0)   0.839 us    |            }
+ 0)               |            watchdog_overflow_callback() {
+ 0)   0.229 us    |              ktime_get_mono_fast_ns();
+ 0)   0.148 us    |              is_hardlockup();
+ 0)   1.209 us    |            }
+ 0)   3.805 us    |          }
+ 0)               |          __intel_pmu_enable_all.constprop.0() {
+ 0)   0.143 us    |            intel_pmu_lbr_enable_all();
+ 0)   0.644 us    |          }
+ 0)   0.150 us    |          intel_bts_enable_local();
+ 0)   7.757 us    |        }
+ 0)   8.469 us    |      }
+ 0)   0.233 us    |      nmi_cpu_backtrace_handler();
+ 0)               |      ghes_notify_nmi() {
+ 0)   0.131 us    |        _raw_spin_lock();
+ 0)               |        __ghes_peek_estatus.isra.0() {
+ 0)               |          apei_read() {
+ 0)   0.323 us    |            apei_check_gar();
+ 0)               |            acpi_os_read_memory() {
+ 0)   0.254 us    |              rcu_read_unlock_strict();
+ 0)   2.961 us    |            }
+ 0)   3.860 us    |          }
+ 0)               |          ghes_copy_tofrom_phys() {
+ 0)               |            native_set_fixmap() {
+ 0)               |              set_pte_vaddr() {
+ 0)   0.147 us    |                fill_pud();
+ 0)   0.222 us    |                fill_pmd();
+ 0)   0.133 us    |                fill_pte();
+ 0)               |                flush_tlb_one_kernel() {
+ 0)   0.382 us    |                  native_flush_tlb_one_user();
+ 0)   0.658 us    |                }
+ 0)   2.058 us    |              }
+ 0)   2.426 us    |            }
+ 0)   0.231 us    |            memcpy_fromio();
+ 0)               |            native_set_fixmap() {
+ 0)               |              set_pte_vaddr() {
+ 0)   0.135 us    |                fill_pud();
+ 0)   0.131 us    |                fill_pmd();
+ 0)   0.131 us    |                fill_pte();
+ 0)               |                flush_tlb_one_kernel() {
+ 0)   0.352 us    |                  native_flush_tlb_one_user();
+ 0)   0.621 us    |                }
+ 0)   1.706 us    |              }
+ 0)   1.992 us    |            }
+ 0)   5.391 us    |          }
+ 0)   9.826 us    |        }
+ 0)   0.133 us    |        rcu_read_unlock_strict();
+ 0) + 10.887 us   |      }
+ 0)   0.133 us    |      rcu_read_unlock_strict();
+ 0) + 23.844 us   |    }
