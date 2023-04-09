@@ -1,0 +1,61 @@
+Linux Kernel Persistent Storage File System:
+  backed by local non-volatile memory and presented to the running system via traditional filesystem interfaces
+  use the ACPI error record serialization table (ERST) to store crash information across a reboot
+  store error records when the kernel dies (or reboots or powers off)
+  the kernel stuffs the tail of the dmesg, which also contains a stack backtrace, into store
+
+  File systems > Miscellaneous filesystems > Persistent store support
+    CONFIG_PSTORE=y
+    CONFIG_PSTORE_CONSOLE=y
+    CONFIG_PSTORE_RAM=y
+
+Ramoops:
+  an oops/panic logger that writes its logs to RAM before the system crashes
+  needs a system with persistent RAM so that the content of that area can survive after a restart
+
+  CONFIG_RAMOOPS=y
+
+
+/sys/fs/pstore/:
+  Currently, two filename prefixes are defined:
+    dmseg: saved console log
+    mce:   architecture-dependent data from fatal hardware error
+  Once the information in a file has been read, removing the file will signal to the underlying persistent
+    storage device that it can reclaim the space for later re-use
+
+systemd-pstore.service:
+    a system service that archives the contents of pstore to other storage, thus preserving the existing
+    information contained in the pstore, and clearing pstore storage for future error events.
+
+$ mount | grep pstore
+pstore on /sys/fs/pstore type pstore (rw,nosuid,nodev,noexec,relatime)
+$ ls -l /sys/fs/pstore/
+total 0
+
+$ grep PSTORE /boot/config-*
+CONFIG_EFI_VARS_PSTORE=m
+# CONFIG_EFI_VARS_PSTORE_DEFAULT_DISABLE is not set
+CONFIG_PSTORE=y
+CONFIG_PSTORE_DEFLATE_COMPRESS=y
+# CONFIG_PSTORE_LZO_COMPRESS is not set
+# CONFIG_PSTORE_LZ4_COMPRESS is not set
+# CONFIG_PSTORE_LZ4HC_COMPRESS is not set
+# CONFIG_PSTORE_842_COMPRESS is not set
+# CONFIG_PSTORE_ZSTD_COMPRESS is not set
+CONFIG_PSTORE_COMPRESS=y
+CONFIG_PSTORE_DEFLATE_COMPRESS_DEFAULT=y
+CONFIG_PSTORE_COMPRESS_DEFAULT="deflate"
+# CONFIG_PSTORE_CONSOLE is not set
+# CONFIG_PSTORE_PMSG is not set
+# CONFIG_PSTORE_FTRACE is not set
+# CONFIG_PSTORE_RAM is not set
+
+# If you have ERST at all, it will normally show up in the kernel's boot time messages about ACPI
+# If pstore is using ERST, you will get some additional kernel messages
+$ grep -i -e pstore -e ERST /var/log/*
+/var/log/syslog: localhost kernel: [    0.001628] ACPI: ERST 0x000000006CA80578 000230 (v01 ALASKA A M I    00000001 INTL 00000001)
+/var/log/syslog: localhost kernel: [    0.001673] ACPI: Reserving ERST table memory at [mem 0x6ca80578-0x6ca807a7]
+/var/log/syslog: localhost kernel: [    7.252988] ERST: Error Record Serialization Table (ERST) support is initialized.
+/var/log/syslog: localhost kernel: [    7.260424] pstore: Registered erst as persistent store backend
+/var/log/syslog: localhost kernel: [    7.819124] pstore: Using crash dump compression: deflate
+/var/log/syslog: localhost kernel: [   49.912646] pstore: ignoring unexpected backend 'efi'
