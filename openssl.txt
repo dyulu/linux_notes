@@ -1,0 +1,417 @@
+OpenSSL is a cryptography software library or toolkit that makes communication over computer networks more secure.
+
+It is generally used for Transport Layer Security(TLS) or Secure Socket Layer(SSL) protocols. 
+
+X.509 certificate:
+  a digital certificate that uses the widely accepted international X.509 public key infrastructure (PKI) standard to
+  verify that a public key belongs to the user, computer or service identity contained within the certificate.
+
+CA:  Certificate Authority
+CMS: Cryptographic Message Syntax
+CRL: Certificate Revocation List
+CSR: Certificate Signing Request
+EC:  Elliptic Curve
+ENC: Encoding with Ciphers
+
+ANS.1: Abstract Syntax Notation One
+BER: Basic Encoding Rules, a partially self-describing and self-delimiting protocol for encoding ASN.1 data structures
+CER: Canonical Encoding Rules, a restricted variant of BER for producing unequivocal transfer syntax for data structures described by ASN.1
+DER: Distinguished Encoding Rules, a restricted variant of BER for producing unequivocal transfer syntax for data structures described by ASN.1
+PEM: Privacy-enhanced Electronic Mail, base64 encoded DER certificate
+DER is in binary format; PEM is in ASCII format
+
+==== Steps to take for running a web or an application server with SSL support
+
+Generate a strong private key
+  e.g., openssl genrsa -out my_server.key 2048
+Create a CSR and send it to a CA
+  e.g., openssl req -new -key my_server.key -out my_server.csr
+        CSR contains the public key and some other attributes requested while creating it
+        After a CSR is generated, it can be used to sign your own certificate and/or send it to a public CA.
+  Self Signing Certificates:
+    If only trying to use SSL with web server for testing, can skip sending the CSR for a CA to sign and make a publicly trusted certificate
+      e.g., openssl x509 -req -days 365 -in my_server.csr -signkey my_server.key -out my_server.crt
+    Can generate the self signed certificate from the private key itself
+      e.g., openssl req -new -x509 -days 365 -key my_server.key -out my_server.crt
+  Creating CSRs from Existing Certificates: helpful when renew the certificate
+    e.g., openssl x509 -x509toreq -in my_server.crt -out my_server.csr -signkey my_server.key
+Install CA provided certificate in your server
+
+====
+
+$ openssl version
+OpenSSL 1.1.1n  15 Mar 2022
+
+$ openssl
+OpenSSL> help
+Standard commands
+asn1parse         ca                ciphers           cms               
+crl               crl2pkcs7         dgst              dhparam           
+dsa               dsaparam          ec                ecparam           
+enc               engine            errstr            gendsa            
+genpkey           genrsa            help              list              
+nseq              ocsp              passwd            pkcs12            
+pkcs7             pkcs8             pkey              pkeyparam         
+pkeyutl           prime             rand              rehash            
+req               rsa               rsautl            s_client          
+s_server          s_time            sess_id           smime             
+speed             spkac             srp               storeutl          
+ts                verify            version           x509              
+
+Message Digest commands (see the `dgst' command for more details)
+blake2b512        blake2s256        gost              md4               
+md5               rmd160            sha1              sha224            
+sha256            sha3-224          sha3-256          sha3-384          
+sha3-512          sha384            sha512            sha512-224        
+sha512-256        shake128          shake256          sm3               
+
+Cipher commands (see the `enc' command for more details)
+aes-128-cbc       aes-128-ecb       aes-192-cbc       aes-192-ecb       
+aes-256-cbc       aes-256-ecb       aria-128-cbc      aria-128-cfb      
+aria-128-cfb1     aria-128-cfb8     aria-128-ctr      aria-128-ecb      
+aria-128-ofb      aria-192-cbc      aria-192-cfb      aria-192-cfb1     
+aria-192-cfb8     aria-192-ctr      aria-192-ecb      aria-192-ofb      
+aria-256-cbc      aria-256-cfb      aria-256-cfb1     aria-256-cfb8     
+aria-256-ctr      aria-256-ecb      aria-256-ofb      base64            
+bf                bf-cbc            bf-cfb            bf-ecb            
+bf-ofb            camellia-128-cbc  camellia-128-ecb  camellia-192-cbc  
+camellia-192-ecb  camellia-256-cbc  camellia-256-ecb  cast              
+cast-cbc          cast5-cbc         cast5-cfb         cast5-ecb         
+cast5-ofb         des               des-cbc           des-cfb           
+des-ecb           des-ede           des-ede-cbc       des-ede-cfb       
+des-ede-ofb       des-ede3          des-ede3-cbc      des-ede3-cfb      
+des-ede3-ofb      des-ofb           des3              desx              
+rc2               rc2-40-cbc        rc2-64-cbc        rc2-cbc           
+rc2-cfb           rc2-ecb           rc2-ofb           rc4               
+rc4-40            seed              seed-cbc          seed-cfb          
+seed-ecb          seed-ofb          sm4-cbc           sm4-cfb           
+sm4-ctr           sm4-ecb           sm4-ofb           
+
+OpenSSL> help genrsa
+Usage: genrsa [options]
+Valid options are:
+ -help               Display this summary
+ -3                  Use 3 for the E value
+ -F4                 Use F4 (0x10001) for the E value
+ -f4                 Use F4 (0x10001) for the E value
+ -out outfile        Output the key to specified file
+ -rand val           Load the file(s) into the random number generator
+ -writerand outfile  Write random data to the specified file
+ -passout val        Output file pass phrase source
+ -*                  Encrypt the output with any supported cipher
+ -engine val         Use engine, possibly a hardware device
+ -primes +int        Specify number of primes
+
+OpenSSL> help req
+Usage: req [options]
+Valid options are:
+ -help               Display this summary
+ -inform PEM|DER     Input format - DER or PEM
+ -outform PEM|DER    Output format - DER or PEM
+ -in infile          Input file
+ -out outfile        Output file
+ -key val            Private key to use
+ -keyform format     Key file format
+ -pubkey             Output public key
+ -new                New request
+ -config infile      Request template file
+ -keyout outfile     File to send the key to
+ -passin val         Private key password source
+ -passout val        Output file pass phrase source
+ -rand val           Load the file(s) into the random number generator
+ -writerand outfile  Write random data to the specified file
+ -newkey val         Specify as type:bits
+ -pkeyopt val        Public key options as opt:value
+ -sigopt val         Signature parameter in n:v form
+ -batch              Do not ask anything during request generation
+ -newhdr             Output "NEW" in the header lines
+ -modulus            RSA modulus
+ -verify             Verify signature on REQ
+ -nodes              Don't encrypt the output key
+ -noout              Do not output REQ
+ -verbose            Verbose output
+ -utf8               Input characters are UTF8 (default ASCII)
+ -nameopt val        Various certificate name options
+ -reqopt val         Various request text options
+ -text               Text form of request
+ -x509               Output a x509 structure instead of a cert request
+                     (Required by some CA's)
+ -subj val           Set or modify request subject
+ -subject            Output the request's subject
+ -multivalue-rdn     Enable support for multivalued RDNs
+ -days +int          Number of days cert is valid for
+ -set_serial val     Serial number to use
+ -addext val         Additional cert extension key=value pair (may be given more than once)
+ -extensions val     Cert extension section (override value in config file)
+ -reqexts val        Request extension section (override value in config file)
+ -precert            Add a poison extension (implies -new)
+ -*                  Any supported digest
+ -engine val         Use engine, possibly a hardware device
+ -keygen_engine val  Specify engine to be used for key generation operations
+
+OpenSSL> help x509
+Usage: x509 [options]
+Valid options are:
+ -help                      Display this summary
+ -inform format             Input format - default PEM (one of DER or PEM)
+ -in infile                 Input file - default stdin
+ -outform format            Output format - default PEM (one of DER or PEM)
+ -out outfile               Output file - default stdout
+ -keyform PEM|DER|ENGINE    Private key format - default PEM
+ -passin val                Private key password/pass-phrase source
+ -serial                    Print serial number value
+ -subject_hash              Print subject hash value
+ -issuer_hash               Print issuer hash value
+ -hash                      Synonym for -subject_hash
+ -subject                   Print subject DN
+ -issuer                    Print issuer DN
+ -email                     Print email address(es)
+ -startdate                 Set notBefore field
+ -enddate                   Set notAfter field
+ -purpose                   Print out certificate purposes
+ -dates                     Both Before and After dates
+ -modulus                   Print the RSA key modulus
+ -pubkey                    Output the public key
+ -fingerprint               Print the certificate fingerprint
+ -alias                     Output certificate alias
+ -noout                     No output, just status
+ -nocert                    No certificate output
+ -ocspid                    Print OCSP hash values for the subject name and public key
+ -ocsp_uri                  Print OCSP Responder URL(s)
+ -trustout                  Output a trusted certificate
+ -clrtrust                  Clear all trusted purposes
+ -clrext                    Clear all certificate extensions
+ -addtrust val              Trust certificate for a given purpose
+ -addreject val             Reject certificate for a given purpose
+ -setalias val              Set certificate alias
+ -days int                  How long till expiry of a signed certificate - def 30 days
+ -checkend intmax           Check whether the cert expires in the next arg seconds
+                            Exit 1 if so, 0 if not
+ -signkey val               Self sign cert with arg
+ -x509toreq                 Output a certification request object
+ -req                       Input is a certificate request, sign and output
+ -CA infile                 Set the CA certificate, must be PEM format
+ -CAkey val                 The CA key, must be PEM format; if not in CAfile
+ -CAcreateserial            Create serial number file if it does not exist
+ -CAserial val              Serial file
+ -set_serial val            Serial number to use
+ -text                      Print the certificate in text form
+ -ext val                   Print various X509V3 extensions
+ -C                         Print out C code forms
+ -extfile infile            File with X509V3 extensions to add
+ -rand val                  Load the file(s) into the random number generator
+ -writerand outfile         Write random data to the specified file
+ -extensions val            Section from config file to use
+ -nameopt val               Various certificate name options
+ -certopt val               Various certificate text options
+ -checkhost val             Check certificate matches host
+ -checkemail val            Check certificate matches email
+ -checkip val               Check certificate matches ipaddr
+ -CAform PEM|DER            CA format - default PEM
+ -CAkeyform PEM|DER|ENGINE  CA key format - default PEM
+ -sigopt val                Signature parameter in n:v form
+ -force_pubkey infile       Force the Key to put inside certificate
+ -next_serial               Increment current certificate serial number
+ -clrreject                 Clears all the prohibited or rejected uses of the certificate
+ -badsig                    Corrupt last byte of certificate signature (for test)
+ -*                         Any supported digest
+ -subject_hash_old          Print old-style (MD5) subject hash value
+ -issuer_hash_old           Print old-style (MD5) issuer hash value
+ -engine val                Use engine, possibly a hardware device
+ -preserve_dates            preserve existing dates when signing
+
+OpenSSL> help verify
+Usage: verify [options] cert.pem...
+Valid options are:
+ -help                 Display this summary
+ -verbose              Print extra information about the operations being performed.
+ -CApath dir           A directory of trusted certificates
+ -CAfile infile        A file of trusted certificates
+ -no-CAfile            Do not load the default certificates file
+ -no-CApath            Do not load certificates from the default certificates directory
+ -untrusted infile     A file of untrusted certificates
+ -trusted infile       A file of trusted certificates
+ -CRLfile infile       File containing one or more CRL's (in PEM format) to load
+ -crl_download         Attempt to download CRL information for this certificate
+ -show_chain           Display information about the certificate chain
+ -nameopt val          Various certificate name options
+ -policy val           adds policy to the acceptable policy set
+ -purpose val          certificate chain purpose
+ -verify_name val      verification policy name
+ -verify_depth int     chain depth limit
+ -auth_level int       chain authentication security level
+ -attime intmax        verification epoch time
+ -verify_hostname val  expected peer hostname
+ -verify_email val     expected peer email
+ -verify_ip val        expected peer IP address
+ -ignore_critical      permit unhandled critical extensions
+ -issuer_checks        (deprecated)
+ -crl_check            check leaf certificate revocation
+ -crl_check_all        check full chain revocation
+ -policy_check         perform rfc5280 policy checks
+ -explicit_policy      set policy variable require-explicit-policy
+ -inhibit_any          set policy variable inhibit-any-policy
+ -inhibit_map          set policy variable inhibit-policy-mapping
+ -x509_strict          disable certificate compatibility work-arounds
+ -extended_crl         enable extended CRL features
+ -use_deltas           use delta CRLs
+ -policy_print         print policy processing diagnostics
+ -check_ss_sig         check root CA self-signatures
+ -trusted_first        search trust store first (default)
+ -suiteB_128_only      Suite B 128-bit-only mode
+ -suiteB_128           Suite B 128-bit mode allowing 192-bit algorithms
+ -suiteB_192           Suite B 192-bit-only mode
+ -partial_chain        accept chains anchored by intermediate trust-store CAs
+ -no_alt_chains        (deprecated)
+ -no_check_time        ignore certificate validity time
+ -allow_proxy_certs    allow the use of proxy certificates
+ -engine val           Use engine, possibly a hardware device
+Recognized usages:
+	sslclient 	SSL client
+	sslserver 	SSL server
+	nssslserver	Netscape SSL server
+	smimesign 	S/MIME signing
+	smimeencrypt	S/MIME encryption
+	crlsign   	CRL signing
+	any       	Any Purpose
+	ocsphelper	OCSP helper
+	timestampsign	Time Stamp signing
+Recognized verify names:
+	default   
+	pkcs7     
+	smime_sign
+	ssl_client
+	ssl_server
+
+====
+
+# Go to a directory that contains .cer files in der format, and run the following to get certificate expiration dates:
+$ for CERT in *.cer ; do echo -en "${CERT}:\n\t" ; openssl x509 -enddate -inform der -in $CERT | grep "^not" ; done
+$ for CERT in *.cer ; do echo -en "${CERT}:\n\t" ; openssl x509 -enddate -noout -inform der -in $CERT; done
+
+# Create RSA Private Key, e.g., private.key, using 2048 for high security
+$ openssl genrsa -out private.key 2048
+Generating RSA private key, 2048 bit long modulus (2 primes)
+...............................................................+++++
+..................................................+++++
+e is 65537 (0x010001)
+$ ls
+private.key
+
+# Create new Private Key, e.g., custom.key, and Certificate Request, e.g., custom.csr
+$ openssl req -nodes -newkey rsa:2048 -keyout custom.key -out custom.csr
+Generating a RSA private key
+......................+++++
+................................+++++
+writing new private key to 'custom.key'
+-----
+You are about to be asked to enter information that will be incorporated
+into your certificate request.
+What you are about to enter is what is called a Distinguished Name or a DN.
+There are quite a few fields but you can leave some blank
+For some fields there will be a default value,
+If you enter '.', the field will be left blank.
+-----
+Country Name (2 letter code) [AU]:US
+State or Province Name (full name) [Some-State]:KS
+Locality Name (eg, city) []:.
+Organization Name (eg, company) [Internet Widgits Pty Ltd]:.
+Organizational Unit Name (eg, section) []:.
+Common Name (e.g. server FQDN or YOUR name) []:yd
+Email Address []:yd@example.com
+
+Please enter the following 'extra' attributes
+to be sent with your certificate request
+A challenge password []:yd
+string is too short, it needs to be at least 4 bytes long
+A challenge password []:yd2023
+An optional company name []:.
+$ ls
+custom.csr  custom.key
+# Verify Certificate Request file
+$ openssl req -noout -text -in custom.csr
+Certificate Request:
+    Data:
+        Version: 1 (0x0)
+        Subject: C = US, ST = KS, CN = yd, emailAddress = yd@example.com
+        Subject Public Key Info:
+            Public Key Algorithm: rsaEncryption
+                RSA Public-Key: (2048 bit)
+                Modulus:
+......
+                Exponent: 65537 (0x10001)
+        Attributes:
+            challengePassword        :yd2023
+    Signature Algorithm: sha256WithRSAEncryption
+......
+
+# Create new Private Key and Self Signed certificate using encryption algorithm of sha512 and validity of 730 days
+$ openssl req -x509 -sha512 -nodes -days 730 -newkey rsa:2048 -keyout custom.key -out custom.pem
+Generating a RSA private key
+........................+++++
+.....................+++++
+writing new private key to 'custom.key'
+-----
+You are about to be asked to enter information that will be incorporated
+into your certificate request.
+What you are about to enter is what is called a Distinguished Name or a DN.
+There are quite a few fields but you can leave some blank
+For some fields there will be a default value,
+If you enter '.', the field will be left blank.
+-----
+Country Name (2 letter code) [AU]:US
+State or Province Name (full name) [Some-State]:KS
+Locality Name (eg, city) []:.
+Organization Name (eg, company) [Internet Widgits Pty Ltd]:.
+Organizational Unit Name (eg, section) []:.
+Common Name (e.g. server FQDN or YOUR name) []:yd
+Email Address []:yd@example.com
+$ ls
+custom.key  custom.pem
+# Verify private key
+$ openssl rsa -in custom.key -check
+RSA key ok
+writing RSA key
+-----BEGIN RSA PRIVATE KEY-----
+......
+-----END RSA PRIVATE KEY-----
+# Verify Certificate Signer Authority
+$ openssl x509 -in custom.pem -noout -issuer -issuer_hash
+issuer=C = US, ST = KS, CN = yd, emailAddress = yd@example.com
+eb6158b0
+# Check hash value of a certificate
+$ openssl x509 -noout -hash -in custom.pem
+eb6158b0
+# Convert PEM to DER format
+$ openssl x509 -outform der -in custom.pem -out custom.der
+$ ls
+custom.der  custom.key  custom.pem
+# Check pem file certificate expiry date
+$ openssl x509 -noout -in custom.pem -dates
+notBefore=Feb 19 16:45:07 2023 GMT
+notAfter=Feb 19 16:45:07 2025 GMT
+# View contents of PEM certificate file
+$ openssl x509 -in custom.pem -text -noout
+Certificate:
+    Data:
+        Version: 3 (0x2)
+        Serial Number:
+......
+        Signature Algorithm: sha512WithRSAEncryption
+        Issuer: C = US, ST = KS, CN = yd, emailAddress = yd@example.com
+        Validity
+            Not Before: Feb 19 16:45:07 2023 GMT
+            Not After : Feb 19 16:45:07 2025 GMT
+        Subject: C = US, ST = KS, CN = yd, emailAddress = yd@example.com
+        Subject Public Key Info:
+            Public Key Algorithm: rsaEncryption
+                RSA Public-Key: (2048 bit)
+                Modulus:
+......
+                Exponent: 65537 (0x10001)
+        X509v3 extensions:
+......
+            X509v3 Basic Constraints: critical
+                CA:TRUE
+    Signature Algorithm: sha512WithRSAEncryption
+......
