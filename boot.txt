@@ -1,0 +1,158 @@
+Linux boot process:
+-------------------
+
+      locates              creates ramdisk & loads
+  BIOS  --> MBR -->  Bootloader  --> initrd image  --> virtual rootFS
+  |  ^                  |                        mounts  |
+  |  |success           |loads                           |runs
+  |  |                  |                                |
+  V  |                  V         prepare real FS        V
+  POST               Kernel <------------------------- Linuxrc
+                        |
+                        |mounts
+                        |
+                        V        runs              loads
+                     real rootFS --> init process  --> system daemons
+                     (pivot root)    (systemd)         (target)
+
+
+initramfs: Initial RAM filesystem vs. initrd: Initial Ram Disk:
+---------------------------------------------------------------
+
+To start Linus OS, need to have either initrd or initramfs filesystem to load kernel into memory.
+Both are used to start kernel, and initiate hardware devices before the real rootFS can be mounted (on system hard disk or storage).
+
+https://github.com/dyulu/debian_examples/blob/main/deb-notes/initramfs.txt
+
+Early user space: initramfs
+  available since version 2.5.46 
+  typical uses are to detect what device drivers are needed to load the main user space FS and load them from a temporary FS
+  preload the block device modules for IDE, SCSI, or RAID, so that the rootFS, on which those modules normally reside, can then be accessed and mounted
+
+initrd:
+A ramdev block device is created.
+  It is a ram-based block device, that is a simulated hard disk that uses memory instead of physical disks.
+The initrd file is read and unzipped into the device, as if you did the following:
+  zcat initrd | dd of=/dev/ram0
+The initrd contains an image of a filesystem, so now you can mount the filesystem as usual:
+  mount /dev/ram0 /root
+  Naturally, filesystems need a driver, so if you use ext2, the ext2 driver has to be compiled in-kernel.
+
+initramfs:
+A tmpfs is mounted:
+  mount -t tmpfs nodev /root.
+  The tmpfs doesn't need a driver, it is always on-kernel. No device needed, no additional drivers.
+The initramfs is uncompressed directly into this new filesystem:
+  zcat initramfs | cpio -i
+
+how the initramfs executes: replace boot with local or remote, e.g., web or nfs, depending on where the rootfs locates
+https://salsa.debian.org/kernel-team/initramfs-tools/-/blob/master/initi
+  init-top:                      e.g., write blacklist to /etc/modprobe.d/initramfs.conf; udev trigger/settle
+  load_modules:                  load custom modules in /conf/modules
+  init-premount:
+  mount_top: boot-top
+  mount_premount: boot-premount
+  mountroot: boot
+  mount_bottom: boot-bottom
+  nfs_bottom
+  local_bottom
+  init-bottom:                  e.g., stop udev and move /dev tmpfs to the rootfs
+
+==== Firmware interfaces that computers use to boot up the operating system
+== BIOS: Basic Input/Output System
+== UEFI: Unified Extensible Firmware Interface
+
+BIOS resides in ROM on motherboard
+
+BIOS performs some integrity checks of the HDD or SSD
+BIOS loads and executes the Master Boot Record (MBR) boot loader
+
+BIOS contains all the code to gain initial access to the main machine devices:
+  keyboard
+  display screen
+  disk drives
+  serial communications
+
+However, most of these devices will have dedicated device drivers taking over once the system boots fully
+
+==== How metadata is stored on drive
+== BIOS uses MBR: Master Boot Record
+== UEFI uses GPT: GUID Partition Table
+
+MBR: located in the 1st sector of the bootable disk
+     contains information about GRUB, or LILO in very old systems
+
+UEFI system stores all startup data in an .efi file, located on EFI System Partition
+
+Use 'fdisk -l' to show system partition
+
+==== POST: power-on self-test
+
+BIOS or UEFI runs POST:
+  verify the hardware components and peripherals
+  carry out tests to ensure that the computer is in proper working condition
+
+==== Boot loader: small program that loads the OS
+== LILO: LInux LOader
+== SYSLINUX: runs on FAT, typical for Windows
+== GNU GRUB: GNU GRand Unified Bootloader
+
+GRUB is typical boot loader for most modern Linux systems
+GRUB splash screen is often the first thing you see when you boot your computer
+
+BIOS or UEFI selects a boot device depending on the system configuration
+
+==== Kernel
+
+OS now controls access to our computer resources
+Linux kernel follows a predefined procedure:
+  decompress itself in place
+  perform hardware checks
+  gain access to vital peripheral hardware
+  mount the initial RAM disk (initrd), a temporary rootFS, until the real rootFS is mounted
+  (look for the compressed initramfs image, decompresses it, load drivers, create root device, mount root partition)
+  transfer control of the boot process to the init process, i.e., /sbin/init
+
+Next, the init process continues the system startup by running init scripts for the parent process.
+Also, the init process inserts more kernel modules (like device drivers).
+
+All kernels are located in the /boot directory together with the initial RAM disk image.
+Kernel once loaded into RAM it always resides on RAM until the machine is shutdown.
+
+==== INIT process
+== Systemd: replaces old SysVinit
+
+The parent of all Linux processes is Systemd
+Systemd performs a range of tasks:
+  probe all remaining hardware
+  mount filesystems
+  initiate and terminate services
+  manage essential system processes like user login
+  run a desktop environment
+
+Systemd uses the /etc/systemd/system/default.target file to decide the state or target the Linux system boots into
+
+
+== Run levels, /etc/inittab
+== Run Control, /etc/rcN.d/, /etc/rc.sysinit, /etc/sysinit, /etc/rc.local
+
+SysVinit identified run levels by number
+In systemd, .target files now replace levels
+
+poweroff.target:   run level 0: turn off (shut down) the computer
+rescue.target:     run level 1: initiate a rescue shell process
+multi-user.target: run level 3: configure the system as a non-graphical (console) multi-user environment
+graphical.target:  run level 5: establish a graphical multi-user interface with network services
+reboot.target:     run level 6: restart the machine
+emergency.target:  emergency run level
+
+== Change the target (run level) while the system runs
+
+To check the current target:
+    sudo systemctl get-default
+
+To switch to run level 3 from run level 5:
+    sudo systemctl isolate multi-user.target
+
+To take the system to run level 5:
+    sudo systemctl isolate graphical.target
