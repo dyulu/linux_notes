@@ -1,0 +1,164 @@
+
+==== findmnt
+
+$ findmnt --help
+
+Usage:
+ findmnt [options]
+ findmnt [options] <device> | <mountpoint>
+ findmnt [options] <device> <mountpoint>
+ findmnt [options] [--source <device>] [--target <path> | --mountpoint <dir>]
+
+Find a (mounted) filesystem.
+
+Options:
+ -s, --fstab            search in static table of filesystems
+ -m, --mtab             search in table of mounted filesystems
+                          (includes user space mount options)
+ -k, --kernel           search in kernel table of mounted
+                          filesystems (default)
+
+ -p, --poll[=<list>]    monitor changes in table of mounted filesystems
+ -w, --timeout <num>    upper limit in milliseconds that --poll will block
+
+ -A, --all              disable all built-in filters, print all filesystems
+ -a, --ascii            use ASCII chars for tree formatting
+ -b, --bytes            print sizes in bytes rather than in human readable format
+ -C, --nocanonicalize   don't canonicalize when comparing paths
+ -c, --canonicalize     canonicalize printed paths
+ -D, --df               imitate the output of df(1)
+ -d, --direction <word> direction of search, 'forward' or 'backward'
+ -e, --evaluate         convert tags (LABEL,UUID,PARTUUID,PARTLABEL) 
+                          to device names
+ -F, --tab-file <path>  alternative file for -s, -m or -k options
+ -f, --first-only       print the first found filesystem only
+ -i, --invert           invert the sense of matching
+ -J, --json             use JSON output format
+ -l, --list             use list format output
+ -N, --task <tid>       use alternative namespace (/proc/<tid>/mountinfo file)
+ -n, --noheadings       don't print column headings
+ -O, --options <list>   limit the set of filesystems by mount options
+ -o, --output <list>    the output columns to be shown
+ -P, --pairs            use key="value" output format
+ -R, --submounts        print all submounts for the matching filesystems
+ -r, --raw              use raw output format
+ -S, --source <string>  the device to mount (by name, maj:min, 
+                          LABEL=, UUID=, PARTUUID=, PARTLABEL=)
+ -T, --target <path>    the path to the filesystem to use
+     --tree             enable tree format output is possible
+ -M, --mountpoint <dir> the mountpoint directory
+ -t, --types <list>     limit the set of filesystems by FS types
+ -U, --uniq             ignore filesystems with duplicate target
+ -u, --notruncate       don't truncate text in columns
+ -v, --nofsroot         don't print [/dir] for bind or btrfs mounts
+
+ -x, --verify           verify mount table content (default is fstab)
+     --verbose          print more details
+
+ -h, --help             display this help
+ -V, --version          display version
+
+Available output columns:
+      SOURCE  source device
+      TARGET  mountpoint
+      FSTYPE  filesystem type
+     OPTIONS  all mount options
+ VFS-OPTIONS  VFS specific mount options
+  FS-OPTIONS  FS specific mount options
+       LABEL  filesystem label
+        UUID  filesystem UUID
+   PARTLABEL  partition label
+    PARTUUID  partition UUID
+     MAJ:MIN  major:minor device number
+      ACTION  action detected by --poll
+  OLD-TARGET  old mountpoint saved by --poll
+ OLD-OPTIONS  old mount options saved by --poll
+        SIZE  filesystem size
+       AVAIL  filesystem size available
+        USED  filesystem size used
+        USE%  filesystem use percentage
+      FSROOT  filesystem root
+         TID  task ID
+          ID  mount ID
+  OPT-FIELDS  optional mount fields
+ PROPAGATION  VFS propagation flags
+        FREQ  dump(8) period in days [fstab only]
+      PASSNO  pass number on parallel fsck(8) [fstab only]
+
+List all mounted filesystems or search for a filesystem
+Able to search in /etc/fstab, /etc/mtab or /proc/self/mountinfo
+If device or mountpoint is not given, all filesystems are shown.
+
+The device may be specified by device name, major:minor numbers, filesystem label or UUID, or partition label or UUID.
+Note that findmnt follows mount behavior where a device name may be interpreted as a mountpoint (and vice versa) if the 
+   --target, --mountpoint or --source options are not specified.
+
+Print all mounted filesystems in the tree-like format by default.
+
+$ findmnt -l
+TARGET                          SOURCE         FSTYPE         OPTIONS
+/sys                            sysfs          sysfs          rw,nosuid,nodev,noexec,relatime
+/proc                           proc           proc           rw,nosuid,nodev,noexec,relatime
+/dev                            udev           devtmpfs       rw,nosuid,relatime,size=16434856k,nr_inodes=4108714,mode=755
+......
+
+$ findmnt
+TARGET                                SOURCE         FSTYPE         OPTIONS
+/                                     /dev/sdb1      ext4           rw,relatime,errors=remount-ro
+├─/sys                                sysfs          sysfs          rw,nosuid,nodev,noexec,relatime
+......
+├─/proc                               proc           proc           rw,nosuid,nodev,noexec,relatime
+......
+├─/dev                                udev           devtmpfs       rw,nosuid,relatime,size=16434856k,nr_inodes=4108714,mode=755
+......
+
+==== blkid
+
+can determine the type of content (e.g. filesystem, swap) a block device holds,
+  and also attributes (tokens, NAME=value pairs) from the content metadata
+  (e.g. LABEL or UUID fields).
+
+has two main forms of operation: either searching for a device with a specific NAME=value pair,
+  or displaying NAME=value pairs for one or more devices.
+
+$ blkid --help
+
+Usage:
+ blkid --label <label> | --uuid <uuid>
+
+ blkid [--cache-file <file>] [-ghlLv] [--output <format>] [--match-tag <tag>] 
+       [--match-token <token>] [<dev> ...]
+
+ blkid -p [--match-tag <tag>] [--offset <offset>] [--size <size>] 
+       [--output <format>] <dev> ...
+
+ blkid -i [--match-tag <tag>] [--output <format>] <dev> ...
+
+Options:
+ -c, --cache-file <file>    read from <file> instead of reading from the default
+                              cache file (-c /dev/null means no cache)
+ -d, --no-encoding          don't encode non-printing characters
+ -g, --garbage-collect      garbage collect the blkid cache
+ -o, --output <format>      output format; can be one of:
+                              value, device, export or full; (default: full)
+ -k, --list-filesystems     list all known filesystems/RAIDs and exit
+ -s, --match-tag <tag>      show specified tag(s) (default show all tags)
+ -t, --match-token <token>  find device with a specific token (NAME=value pair)
+ -l, --list-one             look up only first device with token specified by -t
+ -L, --label <label>        convert LABEL to device name
+ -U, --uuid <uuid>          convert UUID to device name
+ <dev>                      specify device(s) to probe (default: all devices)
+
+Low-level probing options:
+ -p, --probe                low-level superblocks probing (bypass cache)
+ -i, --info                 gather information about I/O limits
+ -S, --size <size>          overwrite device size
+ -O, --offset <offset>      probe at the given offset
+ -u, --usages <list>        filter by "usage" (e.g. -u filesystem,raid)
+ -n, --match-types <list>   filter by filesystem type (e.g. -n vfat,ext3)
+
+ -h, --help                 display this help
+ -V, --version              display version
+
+$ blkid
+/dev/sda1: LABEL_FATBOOT="BOOTDEVICE" LABEL="BOOTDEVICE" UUID="xxxx" TYPE="vfat" PARTLABEL="primary" PARTUUID="xxxx"
