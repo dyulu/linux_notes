@@ -1,0 +1,193 @@
+
+# Show command register, i.e., 4.w, value
+# Bit11-15  Bit 10  Bit 9     Bit 8    Bit 7  Bit 6          Bit 5            Bit 4        Bit 3          Bit 2      Bit 1     Bit 0
+# Reserved  IntDis  FastBBEn  SERR#En  Resvd  ParityErrResp  VGAPaletteSnoop  MemWrtInvEn  SpecialCycles  BusMaster  MemSpace  I/O Space
+# RW  RO  RW  RO  RW  RO  RO  RO  RW  RW  RW
+$ setpci -s 0000:66:04.0 4.w
+0547
+$ lspci -s 0000:66:04.0 -vvv | grep Control:
+  Control: I/O+ Mem+ BusMaster+ SpecCycle- MemWINV- VGASnoop- ParErr+ Stepping- SERR+ FastB2B- DisINTx+
+
+# Set command register value to 0
+$ setpci -s 0000:66:04.0 4.w=0
+$ setpci -s 0000:66:04.0 4.w
+0000
+$ lspci -s 0000:66:04.0 -vvv | grep -i control:
+  Control: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-
+
+# Set command register value back
+$ setpci -s 0000:66:04.0 4.w=547
+$ lspci -s 0000:66:04.0 -vvv | grep -i control:
+  Control: I/O+ Mem+ BusMaster+ SpecCycle- MemWINV- VGASnoop- ParErr+ Stepping- SERR+ FastB2B- DisINTx+
+
+
+$ setpci --help
+Usage: setpci [<options>] (<device>+ <reg>[=<values>]*)*
+
+General options:
+-f    Don't complain if there's nothing to do
+-v    Be verbose
+-D    List changes, don't commit them
+-r    Use raw access without bus scan if possible
+--dumpregs  Dump all known register names and exit
+
+PCI access options:
+-A <method>  Use the specified PCI access method (see `-A help' for a list)
+-O <par>=<val>  Set PCI access parameter (see `-O help' for a list)
+-G    Enable PCI access debugging
+-H <mode>  Use direct hardware access (<mode> = 1 or 2)
+
+Setting commands:
+<device>:  -s [[[<domain>]:][<bus>]:][<slot>][.[<func>]]
+    -d [<vendor>]:[<device>]
+<reg>:    <base>[+<offset>][.(B|W|L)][@<number>]
+<base>:    <address>
+    <named-register>
+    [E]CAP_<capability-name>
+    [E]CAP<capability-number>
+<values>:  <value>[,<value>...]
+<value>:  <hex>
+    <hex>:<mask>
+
+$ setpci -A help
+Known PCI access methods:
+linux-sysfs
+linux-proc
+intel-conf1
+intel-conf2
+dump
+
+$ setpci -O help
+Known PCI access parameters:
+dump.name            Name of the bus dump file to read from ()
+proc.path            Path to the procfs bus tree (/proc/bus/pci)
+sysfs.path           Path to the sysfs device tree (/sys/bus/pci)
+hwdb.disable         Do not look up names in UDEV's HWDB if non-zero (0)
+net.cache_name       Name of the ID cache file (~/.pciids-cache)
+net.domain           DNS domain used for resolving of ID's (pci.id.ucw.cz)
+
+$ setpci --dumpregs
+cap pos w name
+     00 W VENDOR_ID
+     02 W DEVICE_ID
+     04 W COMMAND
+     06 W STATUS
+     08 B REVISION
+     09 B CLASS_PROG
+     0a W CLASS_DEVICE
+     0c B CACHE_LINE_SIZE
+     0d B LATENCY_TIMER
+     0e B HEADER_TYPE
+     0f B BIST
+     10 L BASE_ADDRESS_0
+     14 L BASE_ADDRESS_1
+     18 L BASE_ADDRESS_2
+     1c L BASE_ADDRESS_3
+     20 L BASE_ADDRESS_4
+     24 L BASE_ADDRESS_5
+     28 L CARDBUS_CIS
+     2c W SUBSYSTEM_VENDOR_ID
+     2e W SUBSYSTEM_ID
+     30 L ROM_ADDRESS
+     3c B INTERRUPT_LINE
+     3d B INTERRUPT_PIN
+     3e B MIN_GNT
+     3f B MAX_LAT
+     18 B PRIMARY_BUS
+     19 B SECONDARY_BUS
+     1a B SUBORDINATE_BUS
+     1b B SEC_LATENCY_TIMER
+     1c B IO_BASE
+     1d B IO_LIMIT
+     1e W SEC_STATUS
+     20 W MEMORY_BASE
+     22 W MEMORY_LIMIT
+     24 W PREF_MEMORY_BASE
+     26 W PREF_MEMORY_LIMIT
+     28 L PREF_BASE_UPPER32
+     2c L PREF_LIMIT_UPPER32
+     30 W IO_BASE_UPPER16
+     32 W IO_LIMIT_UPPER16
+     38 L BRIDGE_ROM_ADDRESS
+     3e W BRIDGE_CONTROL
+     10 L CB_CARDBUS_BASE
+     14 W CB_CAPABILITIES
+     16 W CB_SEC_STATUS
+     18 B CB_BUS_NUMBER
+     19 B CB_CARDBUS_NUMBER
+     1a B CB_SUBORDINATE_BUS
+     1b B CB_CARDBUS_LATENCY
+     1c L CB_MEMORY_BASE_0
+     20 L CB_MEMORY_LIMIT_0
+     24 L CB_MEMORY_BASE_1
+     28 L CB_MEMORY_LIMIT_1
+     2c W CB_IO_BASE_0
+     2e W CB_IO_BASE_0_HI
+     30 W CB_IO_LIMIT_0
+     32 W CB_IO_LIMIT_0_HI
+     34 W CB_IO_BASE_1
+     36 W CB_IO_BASE_1_HI
+     38 W CB_IO_LIMIT_1
+     3a W CB_IO_LIMIT_1_HI
+     40 W CB_SUBSYSTEM_VENDOR_ID
+     42 W CB_SUBSYSTEM_ID
+     44 L CB_LEGACY_MODE_BASE
+  01 00 - CAP_PM
+  02 00 - CAP_AGP
+  03 00 - CAP_VPD
+  04 00 - CAP_SLOTID
+  05 00 - CAP_MSI
+  06 00 - CAP_CHSWP
+  07 00 - CAP_PCIX
+  08 00 - CAP_HT
+  09 00 - CAP_VNDR
+  0a 00 - CAP_DBG
+  0b 00 - CAP_CCRC
+  0c 00 - CAP_HOTPLUG
+  0d 00 - CAP_SSVID
+  0e 00 - CAP_AGP3
+  0f 00 - CAP_SECURE
+  10 00 - CAP_EXP
+  11 00 - CAP_MSIX
+  12 00 - CAP_SATA
+  13 00 - CAP_AF
+  14 00 - CAP_EA
+0001 00 - ECAP_AER
+0002 00 - ECAP_VC
+0003 00 - ECAP_DSN
+0004 00 - ECAP_PB
+0005 00 - ECAP_RCLINK
+0006 00 - ECAP_RCILINK
+0007 00 - ECAP_RCECOLL
+0008 00 - ECAP_MFVC
+0009 00 - ECAP_VC2
+000a 00 - ECAP_RBCB
+000b 00 - ECAP_VNDR
+000d 00 - ECAP_ACS
+000e 00 - ECAP_ARI
+000f 00 - ECAP_ATS
+0010 00 - ECAP_SRIOV
+0011 00 - ECAP_MRIOV
+0012 00 - ECAP_MCAST
+0013 00 - ECAP_PRI
+0015 00 - ECAP_REBAR
+0016 00 - ECAP_DPA
+0017 00 - ECAP_TPH
+0018 00 - ECAP_LTR
+0019 00 - ECAP_SECPCI
+001a 00 - ECAP_PMUX
+001b 00 - ECAP_PASID
+001c 00 - ECAP_LNR
+001d 00 - ECAP_DPC
+001e 00 - ECAP_L1PM
+001f 00 - ECAP_PTM
+0020 00 - ECAP_M_PCIE
+0021 00 - ECAP_FRS
+0022 00 - ECAP_RTR
+0023 00 - ECAP_DVSEC
+0024 00 - ECAP_VF_REBAR
+0025 00 - ECAP_DLNK
+0026 00 - ECAP_16GT
+0027 00 - ECAP_LMR
+0028 00 - ECAP_HIER_ID
+0029 00 - ECAP_NPEM
