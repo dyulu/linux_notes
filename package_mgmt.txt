@@ -601,7 +601,7 @@ usage: dnf remove [-c [config file]] [-q] [-v] [--version]
 
 ==== Debian
 
- dpkg --help
+$ dpkg --help
 Usage: dpkg [<option> ...] <command>
 
 Commands:
@@ -720,16 +720,57 @@ Format syntax:
 dpkg-query --list | grep package_name
 dpkg -l | grep package_name
 
+# List files owned by package
+dpkg -L <package>
+
+# Display package status
+dpkg -s <package>
+
+# Search package owning a file
+dpkg -S <package>
+
+# Check for broken packages
+dpkg -C
+
+# List contents of .deb
+dpkg-deb -c <package.deb>
+
+# Verify the integrity of a package
+dpkg -V <package>
+
+# Display available version details
+dpkg -p <package>
+
+# Purge package
+dpkg -P <package>
+
 # Remove a package
 dpkg -r package_name
 
 # Install a package
 dpkg -i package.deb
 
+# Configure a package
+dpkg --configure <package>
+
 # List package dependency
 dpkg -I package_name
 apt-cache depends package_name
 apt depends package_name
+
+# Show information on .deb
+dpkg-deb -I <package.deb>
+dpkg-deb -W <package.deb>
+
+# Show fields of .deb
+dpkg-deb -f <package.deb>
+
+# Extract control info of .deb
+dpkg-deb -e <package.deb>
+
+# Extract files to dst_dir
+dpkg-deb -x <package.deb> <dst_dir>
+dpkg-deb -X <package.deb> <dst_dir>  # List files too
 
 # Check dependency and reverse dependency
 apt-rdepends -r package_name
