@@ -1,0 +1,490 @@
+
+# Launch udev event monitor and watch syslog
+udevadm monitor -p &
+tail -f /var/log/syslog&
+
+# Show kernel drivers handling each device
+lspci -k
+
+# Show kernel drives handling device with vendorID:deviceID
+vendor_device=144d:a822
+lspci -d ${vendor_device} -k
+
+# Show kernel drives handling device with domain:bus:device.function
+bdf=0000:17:00.0
+lspci -s ${bdf} -k
+
+# List devices supported by nvme driver
+ls /sys/bus/pci/drivers/nvme
+
+# Remove a drive and rescan the bus
+# /devices/pci0000:16/0000:16:01.0/0000:17:00.0
+drive=0000:17:00.0
+slot=0000:16:01.0
+drive_domain_bus=0000:17
+echo 1 > /sys/bus/pci/devices/${drive}/remove
+echo 1 > /sys/bus/pci/devices/${slot}/pci_bus/${drive_domain_bus}/rescan
+echo 1 > /sys/bus/pci/rescan
+# /devices/pci0000:64/0000:64:00.0/0000:65:00.0/0000:66:04.0/0000:67:00.0
+drive=0000:67:00.0
+slot=0000:66:04.0
+drive_domain_bus=0000:67
+
+# Find kernel modules, e.g., nvme
+find /lib/modules/$(uname -r)/kernel/ | grep nvme
+
+# PCI_DEVICE(vendor, device)                          # Create a struct pci_device_id
+# PCI_DEVICE_CLASS(device_class, device_class_mask)   # Create a struct pci_device_id
+# MODULE_DEVICE_TABLE(type, name)                     # Creates an alias so file2alias.c can find device table
+# MODULE_DEVICE_TABLE(pci, nvme_id_table)             # drivers/nvme/host/pci.c, { PCI_DEVICE(0x144d, 0xa822),   /* Samsung PM1725a */
+
+# See if a driver has been specified by vendor/product IDs
+#   modprobe -c | grep '<vendor ID>.*<product ID>'
+$ modprobe -c | grep -i 144d.*a822
+alias pci:v0000144Dd0000A822sv*sd*bc*sc*i* nvme
+
+# modules.alias
+# MODULE_ALIAS macro: allows module creator to define additional names of the module
+# Driver aliases with "platform:": drivers/base/platform.c
+$ grep nvme /usr/lib/modules/$(uname -r)/modules.alias | grep -i 144d.*a822
+alias pci:v0000144Dd0000A822sv*sd*bc*sc*i* nvme
+$ modinfo nvme | grep alias
+......
+alias:          pci:v0000144Dd0000A822sv*sd*bc*sc*i*
+......
+
+# Not all modules are specified by vendor/product IDs. Some drivers will cover an entire class of devices
+#   e.g., the xhci_pci module claims support of PCI base class 0x0C, subclass 0x03, interface 0x30
+#         which maps to "Serial bus controller", "USB controller" and "XHCI" respectively
+alias:          pci:v*d*sv*sd*bc0Csc03i30*
+
+# Add support for new devices without having to modify the driver's source code: new_id, remove_id
+# Dynamically add and remove vendor and product IDs to and from a driver's struct pci_driver id_table array
+#  e.g., dynamically add "vendorID deviceID" of ""144d a822" to uio_pci_generic driver
+# static DRIVER_ATTR_WO(new_id);
+# static DRIVER_ATTR_WO(remove_id);
+
+# Userspace IO: mechanism for allowing userspace program to directly access hardware devices w/o going through kernel
+# uio_pci_generic creates a character device file in /dev that userspace program uses to communicate with the device
+# uio_pci_generic works with any device compliant to PCI 2.3 (circa 2002) and any compliant PCI Express device
+# Using it, you only need to write a userspace driver, removing the need to write a hardware-specific kernel module
+# Since the driver does not declare any device ids, it will not get loaded automatically and will not automatically
+# bind to any devices, you must load it and allocate id to the driver yourself. For example,
+modprobe uio_pci_generic
+echo "144d a822" > /sys/bus/pci/drivers/uio_pci_generic/new_id
+# If there already is a hardware specific kernel driver for your device, the generic driver still won't bind to it
+# In this case, you have to manually unbind the hardware specific driver and bind the generic driver. For example,
+echo -n 0000:00:19.0 > /sys/bus/pci/drivers/e1000e/unbind
+echo -n 0000:00:19.0 > /sys/bus/pci/drivers/uio_pci_generic/bind
+ls -l /sys/bus/pci/devices/0000:00:19.0/driver                   # To verify the binding
+
+# Each device can only be handled by a single driver at a time.
+# When a new device is added to the system, the kernel
+#   checks the device's vendorID and deviceID against the struct pci_device_id arrays of all registered drivers
+#   if a match is found, the kernel calls the driver's probe() function to initialize the device
+#   If the device's vendorID and deviceID match the struct pci_device_id arrays of multiple drivers,
+#     the kernel will choose the driver with the highest priority to handle the device
+#     The priority of a driver is determined by the order in which it was registered with the kernel
+# It is worth noting that some devices can be handled by multiple drivers through the use of kernel modules.
+#   For example, a USB device might be handled by the usb-storage module for storage operations and the 
+#     usb-serial module for serial communications.
+#     However, in these cases, each module is responsible for handling a different aspect of the device's functionality,
+#     rather than the device as a whole.
+
+# Hotplug of a pci device:
+#   the PCI bus controller detects the device and sends an interrupt to the CPU to notify it of the new device
+#   the kernel's interrupt handler for the PCI bus controller is called to handle the interrupt
+#   the interrupt handler reads the device's configuration space to determine its vendorID, deviceID, and other attributes
+#   the kernel's PCI subsystem uses vendorID and deviceID to determine which driver should be used to handle the device
+#   if a suitable driver is found, the kernel loads the driver and initializes it to handle the device
+#   the kernel's PCI subsystem creates a new device object for the PCI device and adds it to the kernel's device hierarchy
+#     using the device_add() function
+#   the device_add() function generates the add uevent for the new device using the kobject_uevent() function
+#   user-space applications and processes that have subscribed to receive uevents from the kernel receive the add uevent
+#     and can take appropriate actions in response to the new device being added (PF_NETLINK, NETLINK_KOBJECT_UEVENT)
+
+# Loading nvme with "udevadm monitor&"
+$ modprobe nvme
+KERNEL[497826.941887] add      /devices/virtual/workqueue/nvme-wq (workqueue)
+KERNEL[497826.942041] add      /devices/virtual/workqueue/nvme-wq (workqueue)
+KERNEL[497826.945349] add      /devices/virtual/workqueue/nvme-reset-wq (workqueue)
+KERNEL[497826.945427] add      /devices/virtual/workqueue/nvme-reset-wq (workqueue)
+UDEV  [497826.946596] add      /devices/virtual/workqueue/nvme-wq (workqueue)
+UDEV  [497826.946688] add      /devices/virtual/workqueue/nvme-wq (workqueue)
+UDEV  [497826.948516] add      /devices/virtual/workqueue/nvme-reset-wq (workqueue)
+KERNEL[497826.951767] add      /devices/virtual/workqueue/nvme-delete-wq (workqueue)
+KERNEL[497826.951807] add      /class/nvme (class)
+KERNEL[497826.951833] add      /class/nvme-subsystem (class)
+KERNEL[497826.951859] add      /module/nvme_core (module)
+KERNEL[497826.951886] add      /bus/pci/drivers/nvme (drivers)
+KERNEL[497826.951923] add      /module/nvme (module)
+KERNEL[497826.955683] add      /devices/virtual/workqueue/nvme-delete-wq (workqueue)
+KERNEL[497826.955749] add      /class/nvme (class)
+KERNEL[497826.955776] add      /class/nvme-subsystem (class)
+KERNEL[497826.955803] add      /module/nvme_core (module)
+KERNEL[497826.955840] add      /bus/pci/drivers/nvme (drivers)
+KERNEL[497826.955893] add      /module/nvme (module)
+UDEV  [497826.959483] add      /devices/virtual/workqueue/nvme-delete-wq (workqueue)
+UDEV  [497826.959583] add      /devices/virtual/workqueue/nvme-delete-wq (workqueue)
+UDEV  [497826.959962] add      /devices/virtual/workqueue/nvme-reset-wq (workqueue)
+UDEV  [497826.961781] add      /class/nvme (class)
+UDEV  [497826.963430] add      /class/nvme-subsystem (class)
+UDEV  [497826.969320] add      /module/nvme (module)
+UDEV  [497826.970131] add      /bus/pci/drivers/nvme (drivers)
+UDEV  [497826.970290] add      /module/nvme_core (module)
+UDEV  [497826.970381] add      /module/nvme_core (module)
+UDEV  [497826.970552] add      /class/nvme-subsystem (class)
+UDEV  [497826.970747] add      /class/nvme (class)
+UDEV  [497826.970949] add      /module/nvme (module)
+UDEV  [497826.971141] add      /bus/pci/drivers/nvme (drivers)
+
+
+######## Broadcom switches: Register Reference Manual
+# Hotplug signals are enabled, configured and accessed through physical downstream port's Slot Capability and Slot Status and Control
+#   registers (Downstream Ports, offsets 7Ch and 80h, respectively)
+#
+# PCI Power Management Capabilty Register 0x0040
+#   Bits 31:27 -- PME_Support
+#   Bit  26    -- D2_Support
+#   Bit  25    -- D1_Support
+#   Bits 24:22 -- AUX_Current
+#   Bit  21    -- Device_Specific_Initialization
+#   Bit  20    -- Reserved
+#   Bit  19    -- Does_not_apply_to_pcie_so_return_0
+#   Bits 18:16 -- Version
+#   Bits 15:8  -- Next_Capability_Pointer
+#   Bits 8:0   -- Capability_ID
+#
+# PCI Power Management Status and Control Register 0x0044
+#   Bits 31:24 -- Data
+#   Bit  23    -- Bus_power_or_clock_control_Enable
+#   Bit  22    -- B2_or_B3_Support
+#   Bits 21:16 -- Reserved
+#   Bit  15    -- PME_Status
+#   Bits 14:13 -- Data_scale
+#   Bits 12:9  -- Data_select
+#   Bit  8     -- PME_Enable
+#   Bits 7:4   -- Reserved
+#   Bit  3     -- No_soft_reset
+#   Bit  2     -- Reserved
+#   Bits 1:0   -- Power_state
+#
+# PCI Express Capability List Register 0x0068:
+#   Bits 15:8  -- Next_Capability_Pointer
+#   Bits 7:0   -- Capability_ID
+#
+# Slot Capability Register 0x007C:
+#   Bits 31:19 -- Physical_Slot_Number
+#   Bit  18    -- No_command_complete_support: downstream port cannot accept another hotplug cmd until prior one has complete
+#   Bit  17a   -- Electro_Mechanical_Interlock_present
+#   Bits 16:15 -- Slot_Power_Limit_Scale
+#   Bits 14:7  -- Slot_Power_Limit_Value
+#   Bit  6     -- Hot_Plug_Capable: set for downstream port is an I2C IO Expander is present to enable it as Serial Hotplug-capable
+#   Bit  5     -- Hot_Plug_Suprise: 1 means downstream port slot can be removed from system w/o prior notification
+#   Bit  4     -- Power_Indicate_Present
+#   Bit  3     -- Attention_Indicator_Present
+#   Bit  2     -- MRL_Sensor_Present: Manually operated Retention Latch
+#   Bit  1     -- Power_Controller_Present: if 1, Hotplug Controller powers up the slot when MRL is closed and Slot Control register
+#                                           Power Controller Control bit is cleared
+#   Bit  0     -- Attention_Button_Present
+#
+# Slot Control Register 0x0080:
+#   Bits 15:14 -- Reserved
+#   Bit  13    -- Set_slot_power_limit_message_disable
+#   Bit  12    -- Data_Link_Layer_State_Changed_Enable
+#   Bit  11    -- Electro_Mechanical_Interlock_control
+#   Bit  10    -- Power_Controller_Control: 1 - turns off the power controller
+#   Bits 9:8   -- Power_indicator_control
+#   Bits 7:6   -- Attention_indicator_Control
+#   Bit  5     -- Hot_Plug_Interrupt_Enable
+#   Bit  4     -- Command_Completed_Interrupt_Enable
+#   Bit  3     -- Presence_Detect_Changed_Enable
+#   Bit  2     -- MRL_Sensor_Changed_Enable
+#   Bit  1     -- Power_Fault_Detector_Enable
+#   Bit  0     -- Attention_Button_Pressed_Enable
+#
+# Slot Status Register 0x0082
+#   Bits 15:9  -- Reserved
+#   Bit  8     -- Data_Link_Layer_State_Changed
+#   Bit  7     -- Electromechanical_Interlock_status
+#   Bit  6     -- Presence_Detect_State
+#   Bit  5     -- MRL_Sensor_State
+#   Bit  4     -- Command_Completed
+#   Bit  3     -- Presence_Detect_Changed
+#   Bit  2     -- MRL_Sensor_Changed
+#   Bit  1     -- Power_Fault_Detected
+#   Bit  0     -- Attention_Button_Pressed
+$ lspci -s 0000:66:04.0 -vvv
+......
+	Capabilities: [40] Power Management version 3
+		Flags: PMEClk- DSI- D1- D2- AuxCurrent=0mA PME(D0+,D1-,D2-,D3hot+,D3cold+)
+		Status: D0 NoSoftRst+ PME-Enable- DSel=0 DScale=0 PME-
+......
+	Capabilities: [68] Express (v2) Downstream Port (Slot+), MSI 00
+......
+		SltCap:	AttnBtn- PwrCtrl+ MRL- AttnInd+ PwrInd- HotPlug+ Surprise-
+			Slot #4, PowerLimit 25.000W; Interlock- NoCompl-
+		SltCtl:	Enable: AttnBtn- PwrFlt- MRL- PresDet+ CmdCplt+ HPIrq+ LinkChg+
+			Control: AttnInd Off, PwrInd Unknown, Power- Interlock-
+		SltSta:	Status: AttnBtn- PowerFlt- MRL- CmdCplt- PresDet+ Interlock-
+			Changed: MRL- PresDet- LinkState-
+......
+	Kernel driver in use: pcieport
+$ setpci -s 0000:66:04.0 7C.l
+00200cca
+$ setpci -s 0000:66:04.0 80.w
+10f8
+$ setpci -s 0000:66:04.0 82.w
+0040
+
+# Power off slot
+# Note: wil generate a REMOVE UEVENT
+$ SLOT_POWER_OFF=$((1<<10))
+$ SLOT_CONTROL=$((0x10f8 | $SLOT_POWER_OFF))
+$ echo $SLOT_CONTROL
+5368
+$ echo 'obase=16; 5368' | bc
+14F8
+$ setpci -s 0000:66:04.0 80.w=14f8
+$ setpci -s 0000:66:04.0 80.w
+14f8
+$ lspci -s 0000:66:04.0 -vvv
+......
+	Capabilities: [40] Power Management version 3
+		Flags: PMEClk- DSI- D1- D2- AuxCurrent=0mA PME(D0+,D1-,D2-,D3hot+,D3cold+)
+		Status: D0 NoSoftRst+ PME-Enable- DSel=0 DScale=0 PME-
+......
+	Capabilities: [68] Express (v2) Downstream Port (Slot+), MSI 00
+......
+		SltCap:	AttnBtn- PwrCtrl+ MRL- AttnInd+ PwrInd- HotPlug+ Surprise-
+			Slot #4, PowerLimit 25.000W; Interlock- NoCompl-
+		SltCtl:	Enable: AttnBtn- PwrFlt- MRL- PresDet+ CmdCplt+ HPIrq+ LinkChg+
+			Control: AttnInd Off, PwrInd Unknown, Power+ Interlock-
+		SltSta:	Status: AttnBtn- PowerFlt- MRL- CmdCplt- PresDet+ Interlock-
+			Changed: MRL- PresDet- LinkState-
+......
+	Kernel driver in use: pcieport
+
+# Power the slot back on
+# Note: require a bus scan to get an ADD UEVENT generated
+$ setpci -s 0000:66:04.0 80.w=10f8
+$ setpci -s 0000:66:04.0 80.w
+10f8
+
+# Link Capability Register 0x0074
+#   Bits 31:24 -- Port_number
+#   Bit  23    -- Reserved
+#   Bit  22    -- ASPM_optionality_compliance
+#   Bit  21    -- Link_bandwidth_notification
+#   Bit  20    -- Data_link_layer_link_active_reporting_capable
+#   Bit  19    -- Surprise_down_error_reporting_capable
+#   Bit  18    -- Clock_power_management
+#   Bits 17:15 -- L1_exit_latency
+#   Bits 14:12 -- L0s_exit_latency
+#   Bits 11:10 -- Active_state_link_PM_support
+#   Bits 9:4   -- Max_link_width
+#   Bits 3:0   -- Max_link_speed
+#
+# Link Control Register 0x0078
+#   Bits 15:12 -- Reserved
+#   Bit  11    -- Link_autonomous_bandwidth_interrupt_enable
+#   Bit  10    -- Link_bandwidth_management_interrupt_enable
+#   Bit  9     -- Hardware_autonomous_width_enable
+#   Bit  8     -- Clock_power_management_enable
+#   Bit  7     -- Extended_synch
+#   Bit  6     -- Common_clock_configuration
+#   Bit  5     -- Retrain_link
+#   Bit  4     -- Link_disable: after clearing the bit, software must honor timing requirements defined in spec with
+#                               respect to the first Configuration Read following a Conventional Reset
+#   Bit  3     -- Read_request_return_parameter_control
+#   Bit  2     -- Reserved
+#   Bits 1:0   -- Active_state_link_PM_control
+#
+# Link Status Register 0x007A
+#   Bit  15    -- Link_autonomous_bandwidth_status
+#   Bit  14    -- Link_bandwidth_management_status
+#   Bit  13    -- Data_link_layer_link_active
+#   Bit  12    -- Slot_colck_configuration
+#   Bit  11    -- Link_training
+#   Bit  10    -- Reserved
+#   Bits 9:4   -- Negotiated_link_width
+#   Bits 3:0   -- Link_speed
+$ setpci -s 0000:66:04.0 78.w
+0000
+$ lspci -s 0000:66:04.0 -vvv
+......
+	Capabilities: [68] Express (v2) Downstream Port (Slot+), MSI 00
+......
+		LnkCap:	Port #4, Speed 8GT/s, Width x4, ASPM not supported
+			ClockPM- Surprise+ LLActRep+ BwNot+ ASPMOptComp+
+		LnkCtl:	ASPM Disabled; Disabled- CommClk-
+			ExtSynch- ClockPM- AutWidDis- BWInt- AutBWInt-
+		LnkSta:	Speed 8GT/s (ok), Width x2 (downgraded)
+			TrErr- Train- SlotClk- DLActive+ BWMgmt- ABWMgmt-
+......
+# Disable link
+# Note: this powers off the slot too
+#       this will generate a REMOVE UEVENT
+$ LINK_DISABLE=$((1<<4))
+$ LINK_CONTROL=$((0x0000 | $LINK_DISABLE))
+$ echo "obase=16; $LINK_CONTROL" | bc
+10
+$ setpci -s 0000:66:04.0 78.w=10
+$ setpci -s 0000:66:04.0 78.w
+0012
+$ setpci -s 0000:66:04.0 80.w
+14f8
+$ lspci -s 0000:66:04.0 -vvv
+......
+        Capabilities: [68] Express (v2) Downstream Port (Slot+), MSI 00
+......
+		LnkCap:	Port #4, Speed 8GT/s, Width x4, ASPM not supported
+			ClockPM- Surprise+ LLActRep+ BwNot+ ASPMOptComp+
+		LnkCtl:	ASPM L1 Enabled; Disabled+ CommClk-
+			ExtSynch- ClockPM- AutWidDis- BWInt- AutBWInt-
+		LnkSta:	Speed 2.5GT/s (downgraded), Width x0 (downgraded)
+			TrErr- Train- SlotClk- DLActive- BWMgmt- ABWMgmt-
+......
+		SltCtl:	Enable: AttnBtn- PwrFlt- MRL- PresDet+ CmdCplt+ HPIrq+ LinkChg+
+			Control: AttnInd Off, PwrInd Unknown, Power+ Interlock-
+......
+# Enable link
+# Note: slot remains powered off
+$ setpci -s 0000:66:04.0 78.w=0000
+$ setpci -s 0000:66:04.0 78.w
+0000
+$ setpci -s 0000:66:04.0 80.w
+14f8
+# Power on the slot
+# Note: require a bus scan to get an ADD UEVENT generated
+$ setpci -s 0000:66:04.0 80.w=10f8
+
+# Bridge Control Register 0x003E
+#   Bits 15:12 -- Reserved
+#   Bit  11    -- Discard_timer_SERR_enable
+#   Bit  10    -- Discard_timer_status
+#   Bit  9     -- Secondary_discard_timer
+#   Bit  8     -- Primary_discard_timer
+#   Bit  7     -- Fast_back_to_back_transactions_enable
+#   Bit  6     -- Secondary_Bus_Reset: 1 causes a hot reset on the ports downstream link
+#   Bit  5     -- Master_abort_mode
+#   Bit  4     -- VGA16_enable
+#   Bit  3     -- VGA_enable
+#   Bit  2     -- ISA_enable
+#   Bit  1     -- SERR_enable
+#   Bit  0     -- Parity_error_response_enable
+$ setpci -s 0000:66:04.0 3E.w
+0013
+$ lspci -s 0000:66:04.0 -vvv
+......
+	BridgeCtl: Parity+ SERR+ NoISA- VGA- VGA16+ MAbort- >Reset- FastB2B-
+		PriDiscTmr- SecDiscTmr- DiscTmrStat- DiscTmrSERREn-
+......
+# Set secondary bus reset bit
+# Note: this powers off the slot too
+#       this will generate a REMOVE UEVENT
+$ SECONDARY_BUS_RESET=$((1<<6))
+$ BRIDGE_CONTROL=$((0x0013 | $SECONDARY_BUS_RESET))
+$ echo "obase=16; $BRIDGE_CONTROL" | bc
+53
+$ setpci -s 0000:66:04.0 3E.w=53
+$ setpci -s 0000:66:04.0 3E.w
+0053
+$ setpci -s 0000:66:04.0 78.w
+0000
+$ setpci -s 0000:66:04.0 80.w
+14f8
+# Clear secondary bus reset bit
+$ setpci -s 0000:66:04.0 3E.w
+0013
+$ setpci -s 0000:66:04.0 78.w
+0000
+$ setpci -s 0000:66:04.0 80.w
+14f8
+# Power on the slot
+# Note: require a bus scan to get an ADD UEVENT generated
+$ setpci -s 0000:66:04.0 80.w=10f8
+
+######## Emerald Rapids Processor External Design Specification: Registers
+# Bridge Control (BCTL) 0x3E
+#   PCIe standard register, see as Broadcom
+#   Bit  6     -- Secondary_Bus_Reset: 1 causes a hot reset on the ports downstream link
+#
+# Link Capabilities (LINKCAP) 0x4C
+#   Bits 31:0, the same as Broadcom
+#
+# Link Control (LINKCTL) 0x50
+#   Bits 11:0, the same as Broadcom
+#   Bit  4     -- Link_disable
+#
+# Link Status (LINKSTS) 0x52
+#   Bits 15:0, the same as Broadcom
+#
+# Slot Capabilities (SLOTCAP) 0x54
+#   Bits 31:0, the same as Broadcom
+#
+# Slot Control (SLOTCTL) 0x58
+#   Bits 15:0, the same as Broadcom
+#
+# Slot Status (SLOTSTS) 0x5A
+#   Bits 15:0, the same as Broadcom
+#
+$ setpci -s 0000:16:01.0 0x3E.w
+0013
+$ setpci -s 0000:16:01.0 0x4C.l
+017a4824
+$ setpci -s 0000:16:01.0 0x50.w
+0040
+$ setpci -s 0000:16:01.0 0x52.w
+7023
+$ setpci -s 0000:16:01.0 0x54.l
+040025da
+$ setpci -s 0000:16:01.0 0x58.w
+11f8
+$ setpci -s 0000:16:01.0 0x5A.w
+0040
+
+#### Set secondary bus reset bit
+# Note: this powers off the slot too
+#       this will generate a REMOVE UEVENT
+$ setpci -s 0000:16:01.0 3E.w=53
+$ setpci -s 0000:16:01.0 3E.w
+0053
+$ setpci -s 0000:16:01.0 0x58.w
+17f8
+# Clear secondary bus reset bit
+$ setpci -s 0000:16:01.0 3E.w
+0013
+$ setpci -s 0000:16:01.0 0x58.w
+17f8
+# Power on the slot
+# Note: require a bus scan to get an ADD UEVENT generated
+$ setpci -s 0000:16:01.0 0x58.w=11f8
+
+#### Disable link
+# Note: this powers off the slot too
+#       this will generate a REMOVE UEVENT
+$ setpci -s 0000:16:01.0 0x50.w=50
+$ setpci -s 0000:16:01.0 0x50.w
+0050
+$ setpci -s 0000:16:01.0 0x58.w
+17f8
+# Enable link
+# Note: slot remains powered off
+$ setpci -s 0000:16:01.0 0x50.w=40
+$ setpci -s 0000:16:01.0 0x50.w
+0040
+$ setpci -s 0000:16:01.0 0x58.w
+17f8
+# Power on the slot
+# Note: require a bus scan to get an ADD UEVENT generated
+$ setpci -s 0000:16:01.0 0x58.w=11f8
+
+#### Power off slot
+# Note: wil generate a REMOVE UEVENT
+$ setpci -s 0000:16:01.0 0x58.w=17f8
+$ setpci -s 0000:16:01.0 0x58.w
+17f8
+# Power the slot back on
+# Note: require a bus scan to get an ADD UEVENT generated
+$ setpci -s 0000:16:01.0 0x58.w=11f8
