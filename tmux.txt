@@ -1,0 +1,112 @@
+
+tmux:   https://github.com/tmux/tmux/wiki
+screen: https://www.gnu.org/software/screen/
+
+==== tmux: terminal multiplexer, offer window management and session management
+Allow creation of multiple windows and panes within a single terminal window
+Keep these windows and panes in a session
+Allow exiting a session, i.e., detaching and then attaching later
+Session is kept alive until tmux server is killed, e.g., reboot
+
+When working with remote servers over ssh, if ssh connection is lost
+    tmux session is simply detached but kept running in the background
+    can ssh to the server again and attach to the running session
+    all the processes that were running in the session are still alive
+
+###### Installation
+sudo apt-get install tmux
+
+###### Sessions
+# List current running sessions
+tmux ls
+
+# Attach to a session
+tmux attach -t <session name>              # <session name>: first part of your tmux ls output
+
+# Detach from a session
+Ctrl-b d                                   # Or just type: exit
+
+# Start a session
+tmux
+tmux new
+tmux new-session
+tmux new -s [session-name]
+
+# Rename a session
+tmux rename-session -t <old name> <new name>
+
+# Kill session, from local terminal
+tmux kill-server                            # Kill all
+tmux kill-session -t [session-name]         # Kill one
+
+#### Help
+# List available commands
+Ctrl-b ?
+
+###### Windows
+# Create window
+Ctrl-b c
+
+# Kill current windows
+Ctrl-b &
+
+# Switch between windows
+Ctrl-b p         # Previous window
+Ctrl-b n         # Next window
+Ctrl-b <number>  # Window <number>
+
+# Rename current window
+Ctrl-b ,                                   # Then type new window name
+
+###### Buffer
+# Scroll buffer
+Ctrl-b [           # enter copy mode
+Down/Up arrow or mouse to move up and down
+q or Enter         # Exit copy mode
+
+####### Panes
+# Split window into two horizontal panes
+Ctrl-b %
+
+# Split window into two vertical panes
+Ctrl-b "
+
+# Navigate between panes
+Ctrl-b <arrow key>
+
+# Close pane
+exit   # or Ctrl-d, Ctrl-b x
+
+# Make a pane full screen
+Ctrl-b z
+
+# Resize a pane in the direction of <arrow key>
+Ctrl-b Ctrl-<arrow key>
+
+# Open a panel to navigate across windows in multiple sessions
+Ctrl-b w
+
+# Allow using of mouse to switch between panes, windows and resize them
+Ctrl-b :
+then toggle mouse on/off with: set -g mouse
+
+###### Console: run all the Tmux commands available for the local terminal without tmux prefix
+# Invoke console
+Ctrl-b :                            # Type command after :, noting that : is the prefix of the Tmux console
+# Exit
+esc
+
+###### Mouse
+:set -g mouse on
+:set -g mouse off
+
+###### Copy & Paste between Tmux and host: with mouse mode on
+Enter copy mode: ctrl-b [
+    with mouse support, select text by clicking and dragging the mouse cursor over the text you intend to copy
+    tmux automatically switches to copy mode, highlighting the text you selected
+Select text: holding Shift while left clicking and selecting text 
+Copy text:   ctrl+w
+Paste test:  ctrl+b ]
+
+###### Config file
+.tmux.conf       # set -g mouse on
