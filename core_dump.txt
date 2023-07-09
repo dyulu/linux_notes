@@ -74,6 +74,8 @@ kill -s SIGABRT 4885
 $ ls /var/crash
 core.sleep.4885.bz2 
 
+#### Disable core dump
+$ echo "|/bin/fasle" > /proc/sys/kernel/core_pattern
 
 #### Use gcore to capture the core dump of a running process
 # A core file produced by gcore is equivalent to one produced by the kernel when the process crashes (and when
