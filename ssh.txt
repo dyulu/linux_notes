@@ -7,6 +7,19 @@ ssh-copy-id username@remote_server
 ssh username@remote_server
 ssh -l username remote_server
 
+# Debug issues when password-less authentication not working
+#  e.g., userauth_pubkey: key type ssh-rsa not in PubkeyAcceptedAlgorithms
+ssh -v username@remote_server
+
+# On ssh server, /etc/ssh/sshd_config
+PubkeyAuthentication yes
+AuthorizedKeysFile     .ssh/authorized_keys
+
+sudo systemctl restart sshd
+
+# On ssh client, ~/.ssh/config
+PubkeyAcceptedKeyTypes=+ssh-rsa
+
 # The ssh-agent is a helper program that keeps track of user's identity keys and their passphrases.
 # The agent can then use the keys to log into other servers without having the user type in a
 # password or passphrase again
