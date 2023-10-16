@@ -1,0 +1,44 @@
+# List all cron job for user root
+sudo crontab -u root -l
+
+# Edit cron job
+crontab -e
+
+# List cron related file/directories
+ls /etc/cron*
+
+# run-parts: runs all the executable files named within constraints described below, found in a directory
+#    If neither the --lsbsysinit option nor the --regex option is given then the names must consist entirely of
+#    ASCII upper- and lower-case letters, ASCII digits, ASCII underscores, and ASCII minus-hyphens
+$ run-parts --help
+Usage: run-parts [OPTION]... DIRECTORY
+      --test          print script names which would run, but don't run them.
+      --list          print names of all valid files (can not be used with
+                      --test)
+  -v, --verbose       print script names before running them.
+      --report        print script names if they produce output.
+      --reverse       reverse execution order of scripts.
+      --exit-on-error exit as soon as a script returns with a non-zero exit
+                      code.
+      --stdin         multiplex stdin to scripts being run, using temporary file
+      --lsbsysinit    validate filenames based on LSB sysinit specs.
+      --new-session   run each script in a separate process session
+      --regex=PATTERN validate filenames based on POSIX ERE pattern PATTERN.
+  -u, --umask=UMASK   sets umask to UMASK (octal), default is 022.
+  -a, --arg=ARGUMENT  pass ARGUMENT to scripts, use once for each argument.
+  -V, --version       output version information and exit.
+  -h, --help          display this help and exit.
+
+# To print the names of the scripts which would be run:
+# Files for scripts needs to:
+#     be executable
+#     match the Debian cron script namespace (^[a-zA-Z0-9_-]+$)
+# So if script has extension, e.g., .sh, it won't work
+# Every script placed in folder /etc/cron.hourly would run on hourly basis
+$ sudo run-parts --report --test /etc/cron.daily/
+/etc/cron.daily//apt-compat
+/etc/cron.daily//dpkg
+/etc/cron.daily//exim4-base
+/etc/cron.daily//lighttpd
+/etc/cron.daily//logrotate
+/etc/cron.daily//man-db
