@@ -488,3 +488,150 @@ $ setpci -s 0000:16:01.0 0x58.w
 # Power the slot back on
 # Note: require a bus scan to get an ADD UEVENT generated
 $ setpci -s 0000:16:01.0 0x58.w=11f8
+
+####
+# Downstream Port Containment (DPC) Capability (DPCCAP) 1A4
+#   Bits 15:13 -- reserved
+#   Bit  12    -- DL Active ERR_COR Signaling Supported (DLAECESS)
+#                 Root Ports that support RP Extensions for DPC must set this bit
+#   Bits 11:8  -- RP PIO Log Size (RPPIOLS)
+#   Bit  7     -- DPC Software Triggering Supported (DPCSTS)
+#                 Root Ports that support RP Extensions for DPC must set this bit
+#   Bit  6     -- Poisoned TLP Egress Blocking Supported (PTLPEBS)
+#   Bit  5     -- RP Extension for DPC (RPEDPC)
+#                 If set, a Root Port supports a defined set of DPC Extensions that are specific to Root Ports
+#   Bits 4:0   -- DPC Interrupt Message Number (DPCIMN)
+#
+# DPC Control (DPCCTL) 1A6
+#   Bits 15:8  -- reserved
+#   Bit  7     -- DL_Active ERR_COR Enable (DLAECE)
+#   Bit  6     -- DPC Software Trigger (DPCST)
+#                 If DPC is enabled and DPC Trigger Status bit is clear, when software writes 1b
+#                 to this bit, DPC is triggered. The bit always returns 0b when read.
+#   Bit  5     -- Poisoned TLP Egress Blocking Enable (PTLPEBE)
+#   Bit  4     -- DPC ERR_COR Enable (DPCECE)
+#   Bit  3     -- DPC Interrupt Enable (DPCIE)
+#   Bit  2     -- DPC Completion Control (DPCCC)
+#                 0b Completer Abort (CA)
+#                 1b Unsupported Request (UR)
+#   Bits 1:0   -- DPC Trigger Enable (DPCTE)
+#                 00b DPC disabled
+#                 01b DPC enabled/triggered when DP detects an unmasked uncorretable error or receives ERR_FATAL
+#                 10b DPC enabled/triggered when DP detects an unmasked uncorretable error or receives ERR_NONFATAL/ERR_FATAL
+#                 11b reserved
+#
+# DPC Status (DPCSTS) 1A8
+#   Bits 15:13 -- reserved
+#   Bits 12:8  -- RP PIO First Error Pointer (RPPIOFEP)
+#   Bit  7     -- reserved
+#   Bits 6:5   -- DPC Trigger Reason Extension (DPCTRE)
+#                 00b RP RIO error
+#                 01b DPC Software Trigger bit
+#                 10b reserved
+#                 11b reserved
+#   Bit  4     -- DPC RP Busy (DPCRPB)
+#   Bit  3     -- DPC Interrupt Status (DPCIS)
+#   Bits 2:1   -- DPC Trigger Reason (DPCTR)
+#                 00b unmasked uncorrectable error
+#                 01b ERR_NONTAFAL
+#                 10b ERR_FATAL
+#                 11b reason will be indicated by DPC Trigger Reason Extension field
+#  Bit  0      -- DPC Trigger Status (DPCTS)
+#
+# eDPC Policy (EDPCPR) 19C
+#   Bits 31:13 -- reserved
+#   Bit  12    -- RP PIO Tx UR Enable (TXURE)
+#                 This bit enables RP PIO error handling for all cases where downstream non-posted requests are completed
+#                 by the root port with a UR/CA completion. This includes non-posted requests outstanding when the link
+#                 goes down, non-posted requests targeting a link that is down, non-posted requests received from the
+#                 device core after DPC has been triggered, and AER cases such as AEB, PTLPEB, etc
+#  Bits 11:9   -- Synchronous Processor Exception Completion Status (CPLSTS)
+#                 This is the completion status field used to signal a synchronous processor exception. If this field is
+#                 non-zero, this field is used instead of the UR/CA determined by the logic. If this field is zero, the
+#                 completion status is based on the DPCCTL.DPCCC field
+#  Bits  8:3   -- reserved
+#  Bit   2     -- RP PIO Signaled Fatal System Error (SERR_FAT)
+#                 This bit indicates that a RP PIO error triggered a system error with fatal severity
+#  Bit   1     -- RP PIO Signaled Non-Fatal System Error (SERR_FNAT)
+#                 This bit indicates that a RP PIO error triggered a system error with non-fatal severity
+#  Bit   0     -- RP PIO Signaled Correctable System Error (SERR_COR)
+#                 This bit indicates that a RP PIO error triggered a system error with correctable severity
+#
+
+######## Enhanced Downstream Port Containment Enablement (EDPC)
+
+DPC halts PCIe traffic below a Downstream Port after an unmasked uncorrectable error is detected at or below the Port, avoiding
+the potential spread of any data corruption, and supporting Containment Error Recovery (CER) if implemented by software
+
+EDPC is an enhancement to the DPC by adding Root Port Programmable I/O (RP PIO) errors
+
+Hotplug Surprise is used as a traditional method for NVMe hotplugging method. 
+PCI-SIG introduced DPC as the preferred mechanism for handling surprise hot removal events.
+The Transaction Layer Packet (TLP) stream cleanly stops upon an uncorrectable error that triggers DPC.
+Operating System/driver stacks that supports Containment Error Recovery (CER) can fully and transparently recover
+from many transient PCIe uncorrectable errors. DPC can support async removal and CER concurrently.
+
+EDPC can be enabled to replace the HotPlug Surprise for a robust error containment mechanism that can be used to manage
+asynchronous removal events
+
+EDPC Extended Capability provides a mechanism for Downstream Ports to contain uncorrectable errors and enable software to
+recover from them. After triggering EDPC, downstream port performs following actions:
+    Sets the DPC trigger status bit. Populates the DPC trigger reason field (unmasked Uncorrectable Error (UCE), ERR_FATAL,
+        ERR_NONFATAL, Root Port Programmed I/O (RP PIO), or software (SW) triggered)
+    Disables the link. Once it is in this state, it will remain so until the DPC trigger status bit is cleared
+    Drops posted and returns all 1’s for non-posted transactions. Gracefully handling pending transactions
+    If “PCIe Hotplug Surprise” feature is enabled, then “surprise link down” error will not trigger DPC. It will block the
+        reporting of surprise down error with Hotplug Surprise bit set. When there is a port associated with a hot-pluggable
+        slot and Hotplug Surprise bit in the slot capabilities is set, then any transition from DL_Active to DL_Inactive must
+        not be considered as an error
+
+UEFI firmware needs to configure the EDPC error source registers during the boot time
+Run time error handler is required to manage the EDPC event. In case of OS Native mode, OS performs the error handling. System
+    recovery post-EDPC event requires additional customer specific support solution to dump the error data
+
+######## EDPC aware Native Linux OS Mode
+
+Kernel configuration: CONFIG_PCIE_DPC=y
+EDPC Native OS (Linux) Mode is required to add pcie_ports=native to Kernel grub
+
+Boot time:
+1. UEFI FW optionally enables EDPC prior to handing over control to OS.
+2. Operating System Power Management (OSPM) requests and gets control of EDPC, Advanced Error Report (AER), and hotplug
+3. OSPM initializes AER, DPC, and hotplug registers. Enables EDPC interrupt
+
+Run time:
+1. Uncorrected error detected by RP (for example, Malformed TLP). SW triggered DPC could also be used for validation purpose
+2. RP sends Message Signal Interrupt (MSI) to OS Error Handler. OS handler detects DPC event. DPC Status and Error Source ID
+   are logged; RP PIO status is logged if applicable
+3. If port implements DPC capabilities, OSPM will attempt recovery by releasing the link from DPC, link retraining and active,
+   or restore child devices to working state.
+4. OSPM notifies drivers of child devices of port, the pci_driver via pci_driver’s.err_handler callback: error_detected,
+   slot_reset, error_resume
+
+######## RCCT
+
+Root Complex Completion Timeout: a machine fatal event that can occur in PCIe systems
+
+######## Broadcom switch Read Tracking
+
+Use DPC to keep endpoint errors from spreading to the rest of the tree
+Use Read Tracking to prevent Root Complex Completion Timeout
+
+In Basic Switch mode, recommend to enable Read Tracking on downstream ports to prevent a completion timeout exception in a
+root complex, which is a fatal machine event. Read Tracking feature on a downstream port can prevent a root complete completion
+timeout by completing any root complex issued outstanding non-posted requests when the scoreboard times out.
+
+# Port Tag SB Control register 3B0
+#   Bits 15:0   -- Tag scoreboard port vector; [0] corresponds to port 0, [1] to port 1, and so on
+#                  1: enable read tracking for the port
+#                  0: disable read tracking for the port
+#
+# Tag SB timeout control 0x790
+#   Bits 12:0  -- timeout clock multiplier
+#   Bit  15    -- timeout clock until select: 0 - 4us; 1 - 10ms
+#   Bits 19:16 -- timeout value in ubit given by Bit 15
+
+########  Hotplug Test during Read Operation
+
+dd if=/dev/nvme0n1 of=/dev/null bs=1M count=4M
+In the middle of reading, unplugged the SSD disk, and then hotplug it back
