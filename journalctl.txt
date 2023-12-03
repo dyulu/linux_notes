@@ -1,0 +1,286 @@
+# journalctl: used to query the contents of the systemd journal as written by systemd-journald.service
+
+# Print version
+journalctl --version
+
+# To find out available journal fields to filter with in the format "FIELD=VALUE"
+#   e.g., _SYSTEMD_UNIT=httpd.service
+man systemd.journal-fields
+
+# Show all field names currently used in all entries of the journal: -N, --fields
+journalctl --fields
+
+# Show all of the available values for a given journal field: -F, --field=
+journalctl --field=_COMM
+journalctl --field=_EXE
+
+# Show internal header information of the journal fields accessed
+journalctl --header
+
+# journal configuration file
+$ cat /etc/systemd/journald.conf
+#  This file is part of systemd.
+#
+#  systemd is free software; you can redistribute it and/or modify it under the
+#  terms of the GNU Lesser General Public License as published by the Free
+#  Software Foundation; either version 2.1 of the License, or (at your option)
+#  any later version.
+#
+# Entries in this file show the compile time defaults. Local configuration
+# should be created by either modifying this file, or by creating "drop-ins" in
+# the journald.conf.d/ subdirectory. The latter is generally recommended.
+# Defaults can be restored by simply deleting this file and all drop-ins.
+#
+# Use 'systemd-analyze cat-config systemd/journald.conf' to display the full config.
+#
+# See journald.conf(5) for details.
+
+[Journal]
+#Storage=auto
+#Compress=yes
+#Seal=yes
+#SplitMode=uid
+#SyncIntervalSec=5m
+#RateLimitIntervalSec=30s
+#RateLimitBurst=10000
+#SystemMaxUse=
+#SystemKeepFree=
+#SystemMaxFileSize=
+#SystemMaxFiles=100
+#RuntimeMaxUse=
+#RuntimeKeepFree=
+#RuntimeMaxFileSize=
+#RuntimeMaxFiles=100
+#MaxRetentionSec=
+#MaxFileSec=1month
+#ForwardToSyslog=yes
+#ForwardToKMsg=no
+#ForwardToConsole=no
+#ForwardToWall=yes
+#TTYPath=/dev/console
+#MaxLevelStore=debug
+#MaxLevelSyslog=debug
+#MaxLevelKMsg=notice
+#MaxLevelConsole=info
+#MaxLevelWall=emerg
+#LineMax=48K
+#ReadKMsg=yes
+#Audit=no
+
+
+# Save logs from previous boot, i.e., persistent boot
+# If the distribution does not enable it by default
+$ mkdir -p /var/log/journal
+$ vi /etc/systemd/journald.conf
+[Journal]
+Storage=persistent
+
+# To view all logs, in local time, that journald has collected
+$ journalctl
+
+# To view all logs, in UTC timestamp, that journald has collected
+$ journalctl --utc
+
+# View logs from current boot: -b, --boot
+$ journalctl -b
+
+# See the boots that journald knows about
+$ journalctl --list-boots
+
+# See the journal from previous boot using <boot index> or <boot ID> from --list-boots output
+$ journalctl -b <boot index>
+$ journalctl -b <boot ID>
+
+# Time window options: -S, --since; -U, --until
+# Time format:         YYYY-MM-DD HH:MM:SS
+#                      yesterday, today, tomorrow, or now
+#                      relative time: + or -
+# Example: to see journal starting at 9:00 AM and continuing until an hour ago
+$ journalctl --since 09:00 --until "1 hour ago"
+
+# Filter journal by systemd unit: -u, --unit=UNIT|PATTERN can be specified multiple times
+$ journalctl -u <systemd unit or UNIT PATTERN>
+
+# Show messages for the specified syslog identifier: -t, --identifier=SYSLOG_IDENTIFIER
+# This parameter can be specified multiple times
+journalctl -t <SYSLOG_IDENTIFIER>
+
+# Filter output by pattern: -g, --grep=
+# If the pattern is all lowercase, matching is case insensitive
+# This can be overridden with the --case-sensitive[=BOOLEAN] option
+journalctl  -g <PATTERN>
+
+# Filter journal by _PID, _UID, or _GID
+$ journalctl _PID=<Process ID> --since today
+
+# Show all of the available values for a given journal field: -F, --field=
+journalctl -F _UID
+journalctl -F _GID
+journalctl -F _PID
+
+# If two different fields are matched, only entries matching both expressions at the same time are shown
+journalctl _SYSTEMD_UNIT=avahi-daemon.service _PID=28097
+
+# If two matches refer to the same field, all entries matching either expression are shown
+journalctl _SYSTEMD_UNIT=avahi-daemon.service _SYSTEMD_UNIT=dbus.service
+
+# Filter by component path
+# If the path leads to an executable, journalctl will display all of the entries that involve the executable
+journalctl /usr/bin/bash
+
+# Show kernel messages
+journalctl -k
+journalctl -k -b -1          # all kernel logs from previous boot
+
+# Show journal by priority
+# 0: emerg
+# 1: alert
+# 2: crit
+# 3: err
+# 4: warning
+# 5: notice
+# 6: info
+# 7: debug
+journalctl -p err -b
+
+# Truncate or expand output
+journalctl --no-full
+journalctl --no-pager
+
+# Output format
+# cat:             Displays only the message field itself
+# export:          A binary format suitable for transferring or backing up
+# json:            Standard JSON with one entry per line
+# json-pretty:     JSON formatted for better human-readability
+# json-sse:        JSON formatted output wrapped to make add server-sent event compatible
+# short:           The default syslog style output
+# short-iso:       The default format augmented to show ISO 8601 wallclock timestamps
+# short-monotonic: The default format with monotonic timestamps
+# short-precise:   The default format with microsecond precision
+# verbose:         Shows every journal field available for the entry, including those usually hidden internally
+journalctl -b -u nginx -o json
+journalctl -b -u nginx -o json-pretty
+
+# Show 20 recent logs
+journalctl -n 20
+
+# Follow jonrnal
+journalctl -f
+journalctl -f -u apache    # live log display from a system service apache.service
+
+# Find out disk usage
+journalctl --disk-usage
+
+# Delete old journal
+sudo journalctl --vacuum-size=1G
+sudo journalctl --vacuum-time=1years
+
+# Show messages from system services and the kernel: --system
+journalctl --system
+
+# Show messages from service of current user: --user
+journalctl --user
+
+# Have the journal daemon to write all yet unwritten journal data to the backing file system and synchronize all journals
+journalctl --sync
+
+# Have the journal daemon to flush any log data stored in /run/log/journal/ into /var/log/journal/, if persistent storage is enabled
+journalctl --flush
+
+# Have the journal daemon to rotate journal files
+journalctl --rotate
+
+# /etc/systemd/journald.conf
+# SystemMaxUse=:       maximum disk space that can be used by the journal in persistent storage
+# SystemKeepFree=:     amount of space that the journal should leave free when adding journal entries to persistent storage
+# SystemMaxFileSize=:  how large individual journal files can grow to in persistent storage before being rotated
+# RuntimeMaxUse=:      maximum disk space that can be used in volatile storage (within the /run filesystem)
+# RuntimeKeepFree=:    amount of space to be set aside for other uses when writing data to volatile storage (within the /run filesystem)
+# RuntimeMaxFileSize=: amount of space an individual journal file can take up in volatile storage (within the /run filesystem) before being rotated
+
+# Have journalctl operate on the specified journal directory: -D DIR, --directory=DIR
+# Have journalctl operate on the specified journal files:     --file=GLOB
+
+$ journalctl --help
+journalctl [OPTIONS...] [MATCHES...]
+
+Query the journal.
+
+Source Options:
+     --system                Show the system journal
+     --user                  Show the user journal for the current user
+  -M --machine=CONTAINER     Operate on local container
+  -m --merge                 Show entries from all available journals
+  -D --directory=PATH        Show journal files from directory
+     --file=PATH             Show journal file
+     --root=ROOT             Operate on files below a root directory
+     --image=IMAGE           Operate on files in filesystem image
+     --namespace=NAMESPACE   Show journal data from specified journal namespace
+
+Filtering Options:
+  -S --since=DATE            Show entries not older than the specified date
+  -U --until=DATE            Show entries not newer than the specified date
+  -c --cursor=CURSOR         Show entries starting at the specified cursor
+     --after-cursor=CURSOR   Show entries after the specified cursor
+     --cursor-file=FILE      Show entries after cursor in FILE and update FILE
+  -b --boot[=ID]             Show current boot or the specified boot
+  -u --unit=UNIT             Show logs from the specified unit
+     --user-unit=UNIT        Show logs from the specified user unit
+  -t --identifier=STRING     Show entries with the specified syslog identifier
+  -p --priority=RANGE        Show entries with the specified priority
+     --facility=FACILITY...  Show entries with the specified facilities
+  -g --grep=PATTERN          Show entries with MESSAGE matching PATTERN
+     --case-sensitive[=BOOL] Force case sensitive or insensitive matching
+  -k --dmesg                 Show kernel message log from the current boot
+
+Output Control Options:
+  -o --output=STRING         Change journal output mode (short, short-precise,
+                               short-iso, short-iso-precise, short-full,
+                               short-monotonic, short-unix, verbose, export,
+                               json, json-pretty, json-sse, json-seq, cat,
+                               with-unit)
+     --output-fields=LIST    Select fields to print in verbose/export/json modes
+  -n --lines[=INTEGER]       Number of journal entries to show
+  -r --reverse               Show the newest entries first
+     --show-cursor           Print the cursor after all the entries
+     --utc                   Express time in Coordinated Universal Time (UTC)
+  -x --catalog               Add message explanations where available
+     --no-hostname           Suppress output of hostname field
+     --no-full               Ellipsize fields
+  -a --all                   Show all fields, including long and unprintable
+  -f --follow                Follow the journal
+     --no-tail               Show all lines, even in follow mode
+  -q --quiet                 Do not show info messages and privilege warning
+
+Pager Control Options:
+     --no-pager              Do not pipe output into a pager
+  -e --pager-end             Immediately jump to the end in the pager
+
+Forward Secure Sealing (FSS) Options:
+     --interval=TIME         Time interval for changing the FSS sealing key
+     --verify-key=KEY        Specify FSS verification key
+     --force                 Override of the FSS key pair with --setup-keys
+
+Commands:
+  -h --help                  Show this help text
+     --version               Show package version
+  -N --fields                List all field names currently used
+  -F --field=FIELD           List all values that a specified field takes
+     --list-boots            Show terse information about recorded boots
+     --disk-usage            Show total disk usage of all journal files
+     --vacuum-size=BYTES     Reduce disk usage below specified size
+     --vacuum-files=INT      Leave only the specified number of journal files
+     --vacuum-time=TIME      Remove journal files older than specified time
+     --verify                Verify journal file consistency
+     --sync                  Synchronize unwritten journal messages to disk
+     --relinquish-var        Stop logging to disk, log to temporary file system
+     --smart-relinquish-var  Similar, but NOP if log directory is on root mount
+     --flush                 Flush all journal data from /run into /var
+     --rotate                Request immediate rotation of the journal files
+     --header                Show journal header information
+     --list-catalog          Show all message IDs in the catalog
+     --dump-catalog          Show entries in the message catalog
+     --update-catalog        Update the message catalog database
+     --setup-keys            Generate a new FSS key pair
+
+See the journalctl(1) man page for details.
