@@ -1,0 +1,77 @@
+# timedatectl: used to query and change the system clock and its settings,
+#              and enable or disable time synchronization services
+
+# timedatectl status or timedatectl
+# timedatectl show: display the same info in machine readable format
+$ timedatectl
+               Local time: Fri 2023-11-24 10:36:12 EST
+           Universal time: Fri 2023-11-24 15:36:12 UTC
+                 RTC time: Fri 2023-11-24 15:36:12
+                Time zone: America/New_York (EST, -0500)
+System clock synchronized: no
+              NTP service: n/a
+          RTC in local TZ: no
+$ timedatectl show
+Timezone=America/New_York
+LocalRTC=no
+CanNTP=no
+NTP=no
+NTPSynchronized=no
+TimeUSec=Fri 2023-11-24 10:36:12 EST
+RTCTimeUSec=Fri 2023-11-24 10:36:12 EST
+
+# See available time zones
+timedatectl list-timezones
+
+# Set time zone
+sudo timedatectl set-timezone <TIMEZONE>
+
+# Set time:
+#   set system clock to specified time
+#   update the RTC time accordingly
+#   <TIME>: 2023-11-24 10:36:12
+sudo timedatectl set-time <TIME>
+
+# Maintain RTC in universal time or not
+timedatectl set-local-rtc <BOOL>
+
+# Enable network time synchronization
+timedatectl set-ntp true
+systemctl status systemd-timesyncd.service
+timedatectl timesync-status
+timedatectl show-timesync
+timedatectl ntp-servers INTERFACE SERVER...
+timedatectl revert INTERFACE
+
+$ timedatectl --help
+timedatectl [OPTIONS...] COMMAND ...
+
+Query or change system time and date settings.
+
+Commands:
+  status                   Show current time settings
+  show                     Show properties of systemd-timedated
+  set-time TIME            Set system time
+  set-timezone ZONE        Set system time zone
+  list-timezones           Show known time zones
+  set-local-rtc BOOL       Control whether RTC is in local time
+  set-ntp BOOL             Enable or disable network time synchronization
+
+systemd-timesyncd Commands:
+  timesync-status          Show status of systemd-timesyncd
+  show-timesync            Show properties of systemd-timesyncd
+
+Options:
+  -h --help                Show this help message
+     --version             Show package version
+     --no-pager            Do not pipe output into a pager
+     --no-ask-password     Do not prompt for password
+  -H --host=[USER@]HOST    Operate on remote host
+  -M --machine=CONTAINER   Operate on local container
+     --adjust-system-clock Adjust system clock when changing local RTC mode
+     --monitor             Monitor status of systemd-timesyncd
+  -p --property=NAME       Show only properties by this name
+  -a --all                 Show all properties, including empty ones
+     --value               When showing properties, only print the value
+
+See the timedatectl(1) man page for details.
