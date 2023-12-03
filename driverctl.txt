@@ -1,0 +1,60 @@
+#### https://gitlab.com/driverctl/driverctl
+# driverctl is a tool for manipulating and inspecting the system device driver choices
+
+$ apt update
+$ apt install driverctl
+$ dpkg -l | grep driverctl
+ii  driverctl   0.111-1   all    Device driver control utility for Linux
+
+$ driverctl
+Usage: driverctl [OPTIONS...] {COMMAND}...
+
+Inspect or control default device driver bindings.
+
+Supported commands:
+  set-override <device> <driver>    Make <driver> the default driver
+                                    for <device>
+  unset-override <device>           Remove any override for <device>
+  load-override <device>            Load an override previously specified
+                                    for <device>
+  list-devices                      List all overridable devices
+  list-overrides                    List all currently specified overrides
+
+Supported options:
+ -h --help             Show this help
+ -v --verbose --debug  Show verbose debug information
+ -b --bus <bus>        Work on bus <bus> (default pci)
+    --noprobe          Do not reprobe when setting, unsetting, or
+                       loading an override
+    --nosave           Do not save changes when setting or unsetting
+                       an override
+
+# https://www.spinics.net/lists/linux-pci/msg102243.html
+# PCI: Move pci_match_device() ahead of new_id_store()
+# PCI: Avoid duplicate IDs in driver dynamic IDs list
+# applied both to pci/enumeration for kernel v5.11
+
+$ ls -lart /sys/bus/pci/drivers/uio_pci_generic
+$ ls -lart /sys/bus/pci/drivers/nvme
+
+# Works in 5.10, but not in 5.11 and above:
+echo 0000:74:00.0 > /sys/bus/pci/devices/0000:74:00.0/driver/unbind
+echo "144d a824" > /sys/bus/pci/drivers/uio_pci_generic/new_id
+echo "144d a824" > /sys/bus/pci/drivers/uio_pci_generic/new_id
+  
+# Works in 5.11 and above:
+driverctl set-override 0000:74:00.0 uio_pci_generic
+
+# If 0000:74:00.0 is not associated with a driver
+$ echo 0000:74:00.0 > /sys/bus/pci/devices/0000:74:00.0/driver/unbind
+bash: /sys/bus/pci/devices/0000:74:00.0/driver/unbind: No such file or directory
+
+# If 0000:74:00.0 is associated with a driver
+$ echo 0000:74:00.0 > /sys/bus/pci/devices/0000:74:00.0/driver/unbind
+$ echo $?
+0
+
+# With 5.11 and above, cannot add duplicated IDs any more
+$ echo "144d a824" > /sys/bus/pci/drivers/uio_pci_generic/new_id
+$ echo "144d a824" > /sys/bus/pci/drivers/uio_pci_generic/new_id
+bash: echo: write error: File exists
