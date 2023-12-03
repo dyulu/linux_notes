@@ -342,6 +342,12 @@ git diff mycommit~ mycommit
 git cherry-pick mynonmergecommit         # This commit is not a merge; cannot specify -m
 git cherry-pick -m 1 mymergecommit       # This commit is a merge;  -m parent-number; —mainline parent-number
 
+# Cherry-pick a commit but change its commit message
+git cherry-pick -e <commit>
+
+# Cherry-pick w/o commiting
+git cherry-pick --no-commit <commit>
+
 # GitHub:
 Create a new repository on the command line:
 echo "# My repository readme" >> README.md
@@ -372,6 +378,10 @@ git push --force-with-lease
 --force-with-lease: a safer option that will not overwrite any work on the remote branch
                     In case of more commits were added to the remote branch (by another team-member), it ensures you
                     do not overwrite someone elses work by force pushing
+
+# Add changed file(s) to last commit without changing commit message
+git add <additional changed files>
+git commit --amend --no-edit
 
 # Add a changed file to an older (not last) commit
 git stash                 # store the changes you want to add
@@ -415,10 +425,13 @@ Corresponding commits: --fixup and --squash
 Act upon commits with a message that begins fixup! or squash!, and still open editor like a regular interactive rebase
     git rebase --interactive --autosquash
 
-#### Rebasing branch
+#### Rebasing feature branch to main
 # Reapply commits on feature branch to main branch
+git checkout main
+git pull
 git checkout feature
-git rebase main
+git rebase -i main   # -i for interactive; need to address conflicts and whatnot
+git push --force-with-lease
 # then, go back to the main branch and do a fast-forward merge
 git checkout main
 git merge feature
