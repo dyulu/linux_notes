@@ -1,0 +1,324 @@
+# https://bluesmoke.sourceforge.net/
+# https://www.kernel.org/doc/html/v4.10/admin-guide/ras.html
+# https://www.kernel.org/doc/html/v4.14/driver-api/edac.html
+# https://docs.kernel.org/driver-api/edac.html
+# EDAC: Error Detection And Correction
+#
+# Memory devices:
+#   individual DRAM chips on a memory stick
+#   commonly output 4 and 8 bits each (x4, x8)
+#   grouping several of them in parallel provides the #bits that memory controller expects:
+#     typically 72 bits, in order to provide 64 bits + 8 bits of ECC data
+#
+# Memory Stick: also called DIMM (Dual Inline Memory Module)
+#   printed circuit board that aggregates multiple memory devices in parallel
+#   this is the Field Replaceable Unit (FRU) which gets replaced, in the case of excessive errors
+#
+# Memory Socket: also called slot
+#   physical connector on the motherboard that accepts a single memory stick
+#
+# Channel: memory controller channel
+#   responsible to communicate with a group of DIMMs
+#   has its own independent control (command) and data bus
+#   can be used independently or grouped with other channels
+#
+# Branch:
+#   typically the highest hierarchy on a Fully-Buffered DIMM memory controller
+#   typically contains two channels
+#     can be used in single mode or in lockstep mode
+#     in lockstep mode, the cacheline is doubled,
+#       but it generally brings some performance penalty
+#       generally not possible to point to just one memory stick when an error occurs,
+#         as the error correction code is calculated using two DIMMs instead of one
+#         due to that, it is capable of correcting more errors than on single mode
+#
+# Single-channel:
+#   data accessed by the memory controller is contained into one dimm only.
+#   if the data is 64 bits-wide, the data flows to the CPU using one 64 bits parallel access
+#   typically used with SDR, DDR, DDR2 and DDR3 memories
+#
+# Double-channel:
+#   data size accessed by the memory controller is interlaced into two dimms, accessed at the same time
+#    if the DIMM is 64 bits-wide (72 bits with ECC), the data flows to the CPU using a 128 bits parallel access
+#
+# Chip-select row:
+#   the name of the DRAM signal used to select the DRAM ranks to be accessed
+#   common chip-select rows for single channel are 64 bits, for dual channel 128 bits
+#
+# Single-Ranked stick:
+#   has 1 chip-select row of memory
+#   motherboards commonly drive two chip-select pins to a memory stick
+#     single-ranked stick will occupy only one of those rows
+#     the other will be unused
+#
+# Double-Ranked stick:
+#   has two chip-select rows which access different sets of memory devices
+#   the two rows cannot be accessed concurrently
+#
+# Double-sided stick: DEPRECATED TERM, see Double-Ranked stick
+#
+# Socket set:
+#   all of the memory sticks that are required for a single memory access 
+#   or all of the memory sticks spanned by a chip-select row
+#   a single socket set has two chip-select rows
+#     if double-sided sticks are used these will occupy those chip-select rows
+# Bank:
+#   this term is avoided because it is unclear when needing to distinguish between chip-select rows and socket sets
+
+
+# https://android.googlesource.com/kernel/common/+/bcmdhd-3.10/Documentation/edac.txt
+# The following example will assume 2 channels:
+#		Channel 0	Channel 1
+#	===================================
+#	csrow0	| DIMM_A0	| DIMM_B0 |
+#	csrow1	| DIMM_A0	| DIMM_B0 |
+#	===================================
+#	===================================
+#	csrow2	| DIMM_A1	| DIMM_B1 |
+#	csrow3	| DIMM_A1	| DIMM_B1 |
+#	===================================
+# In the above example table there are 4 physical slots on the motherboard for memory DIMMs:
+#	DIMM_A0
+#	DIMM_B0
+#	DIMM_A1
+#	DIMM_B1
+# Notice that there are two csrows possible on a physical DIMM.
+# These csrows are allocated their csrow assignment based on the slot into which the memory DIMM is placed.
+# Thus, when 1 DIMM is placed in each Channel, the csrows cross both DIMMs.
+#
+# Memory DIMMs come single or dual "ranked".
+# A rank is a populated csrow.
+# Thus, 2 single ranked DIMMs, placed in slots DIMM_A0 and DIMM_B0 above will have 1 csrow, csrow0. csrow1 will be empty.
+# On the other hand, when 2 dual ranked DIMMs are similarly placed, then both csrow0 and csrow1 will be populated.
+# The pattern repeats itself for csrow2 and csrow3.
+
+
+$ tree /sys/devices/system/edac/mc
+/sys/devices/system/edac/mc
+├── mc0
+│   ├── ce_count
+│   ├── ce_noinfo_count
+│   ├── csrow0
+│   │   ├── ce_count
+│   │   ├── ch0_ce_count
+│   │   ├── ch0_dimm_label
+│   │   ├── ch1_ce_count
+│   │   ├── ch1_dimm_label
+│   │   ├── dev_type
+│   │   ├── edac_mode
+│   │   ├── mem_type
+│   │   ├── power
+│   │   │   ├── autosuspend_delay_ms
+│   │   │   ├── control
+│   │   │   ├── runtime_active_time
+│   │   │   ├── runtime_status
+│   │   │   └── runtime_suspended_time
+│   │   ├── size_mb
+│   │   ├── ue_count
+│   │   └── uevent
+│   ├── dimm0
+│   │   ├── dimm_ce_count
+│   │   ├── dimm_dev_type
+│   │   ├── dimm_edac_mode
+│   │   ├── dimm_label
+│   │   ├── dimm_location
+│   │   ├── dimm_mem_type
+│   │   ├── dimm_ue_count
+│   │   ├── power
+│   │   │   ├── autosuspend_delay_ms
+│   │   │   ├── control
+│   │   │   ├── runtime_active_time
+│   │   │   ├── runtime_status
+│   │   │   └── runtime_suspended_time
+│   │   ├── size
+│   │   └── uevent
+│   ├── dimm2
+│   │   ├── dimm_ce_count
+│   │   ├── dimm_dev_type
+│   │   ├── dimm_edac_mode
+│   │   ├── dimm_label
+│   │   ├── dimm_location
+│   │   ├── dimm_mem_type
+│   │   ├── dimm_ue_count
+│   │   ├── power
+│   │   │   ├── autosuspend_delay_ms
+│   │   │   ├── control
+│   │   │   ├── runtime_active_time
+│   │   │   ├── runtime_status
+│   │   │   └── runtime_suspended_time
+│   │   ├── size
+│   │   └── uevent
+│   ├── max_location
+│   ├── mc_name
+│   ├── power
+│   │   ├── autosuspend_delay_ms
+│   │   ├── control
+│   │   ├── runtime_active_time
+│   │   ├── runtime_status
+│   │   └── runtime_suspended_time
+│   ├── reset_counters
+│   ├── seconds_since_reset
+│   ├── size_mb
+│   ├── ue_count
+│   ├── ue_noinfo_count
+│   └── uevent
+├── mc1
+│   ├── ce_count
+│   ├── ce_noinfo_count
+│   ├── csrow0
+│   │   ├── ce_count
+│   │   ├── ch0_ce_count
+│   │   ├── ch0_dimm_label
+│   │   ├── ch1_ce_count
+│   │   ├── ch1_dimm_label
+│   │   ├── dev_type
+│   │   ├── edac_mode
+│   │   ├── mem_type
+│   │   ├── power
+│   │   │   ├── autosuspend_delay_ms
+│   │   │   ├── control
+│   │   │   ├── runtime_active_time
+│   │   │   ├── runtime_status
+│   │   │   └── runtime_suspended_time
+│   │   ├── size_mb
+│   │   ├── ue_count
+│   │   └── uevent
+│   ├── dimm0
+│   │   ├── dimm_ce_count
+│   │   ├── dimm_dev_type
+│   │   ├── dimm_edac_mode
+│   │   ├── dimm_label
+│   │   ├── dimm_location
+│   │   ├── dimm_mem_type
+│   │   ├── dimm_ue_count
+│   │   ├── power
+│   │   │   ├── autosuspend_delay_ms
+│   │   │   ├── control
+│   │   │   ├── runtime_active_time
+│   │   │   ├── runtime_status
+│   │   │   └── runtime_suspended_time
+│   │   ├── size
+│   │   └── uevent
+│   ├── dimm2
+│   │   ├── dimm_ce_count
+│   │   ├── dimm_dev_type
+│   │   ├── dimm_edac_mode
+│   │   ├── dimm_label
+│   │   ├── dimm_location
+│   │   ├── dimm_mem_type
+│   │   ├── dimm_ue_count
+│   │   ├── power
+│   │   │   ├── autosuspend_delay_ms
+│   │   │   ├── control
+│   │   │   ├── runtime_active_time
+│   │   │   ├── runtime_status
+│   │   │   └── runtime_suspended_time
+│   │   ├── size
+│   │   └── uevent
+│   ├── max_location
+│   ├── mc_name
+│   ├── power
+│   │   ├── autosuspend_delay_ms
+│   │   ├── control
+│   │   ├── runtime_active_time
+│   │   ├── runtime_status
+│   │   └── runtime_suspended_time
+│   ├── reset_counters
+│   ├── seconds_since_reset
+│   ├── size_mb
+│   ├── ue_count
+│   ├── ue_noinfo_count
+│   └── uevent
+├── power
+│   ├── autosuspend_delay_ms
+│   ├── control
+│   ├── runtime_active_time
+│   ├── runtime_status
+│   └── runtime_suspended_time
+├── subsystem -> ../../../../bus/edac
+└── uevent
+
+$ for file in $(ls /sys/devices/system/edac/mc/mc*/ce_count); do printf '%s: ' "$file";  cat "$file"; done
+/sys/devices/system/edac/mc/mc0/ce_count: 0
+/sys/devices/system/edac/mc/mc1/ce_count: 0
+$ for file in $(ls /sys/devices/system/edac/mc/mc*/ue_count); do printf '%s: ' "$file";  cat "$file"; done
+/sys/devices/system/edac/mc/mc0/ue_count: 0
+/sys/devices/system/edac/mc/mc1/ue_count: 0
+$ for file in $(ls /sys/devices/system/edac/mc/mc*/ce_noinfo_count); do printf '%s: ' "$file";  cat "$file"; done
+/sys/devices/system/edac/mc/mc0/ce_noinfo_count: 0
+/sys/devices/system/edac/mc/mc1/ce_noinfo_count: 0
+$ for file in $(ls /sys/devices/system/edac/mc/mc*/ue_noinfo_count); do printf '%s: ' "$file";  cat "$file"; done
+/sys/devices/system/edac/mc/mc0/ue_noinfo_count: 0
+/sys/devices/system/edac/mc/mc1/ue_noinfo_count: 0
+$ for file in $(ls /sys/devices/system/edac/mc/mc*/size_mb); do printf '%s: ' "$file";  cat "$file"; done
+/sys/devices/system/edac/mc/mc0/size_mb: 16384
+/sys/devices/system/edac/mc/mc1/size_mb: 16384
+
+$ for file in $(ls /sys/devices/system/edac/mc/mc*/dimm*/dimm_ce_count); do printf '%s: ' "$file";  cat "$file"; done
+/sys/devices/system/edac/mc/mc0/dimm0/dimm_ce_count: 0
+/sys/devices/system/edac/mc/mc0/dimm2/dimm_ce_count: 0
+/sys/devices/system/edac/mc/mc1/dimm0/dimm_ce_count: 0
+/sys/devices/system/edac/mc/mc1/dimm2/dimm_ce_count: 0
+$ for file in $(ls /sys/devices/system/edac/mc/mc*/dimm*/dimm_ue_count); do printf '%s: ' "$file";  cat "$file"; done
+/sys/devices/system/edac/mc/mc0/dimm0/dimm_ue_count: 0
+/sys/devices/system/edac/mc/mc0/dimm2/dimm_ue_count: 0
+/sys/devices/system/edac/mc/mc1/dimm0/dimm_ue_count: 0
+/sys/devices/system/edac/mc/mc1/dimm2/dimm_ue_count: 0
+$ for file in $(ls /sys/devices/system/edac/mc/mc*/dimm*/size); do printf '%s: ' "$file";  cat "$file"; done
+/sys/devices/system/edac/mc/mc0/dimm0/size: 8192
+/sys/devices/system/edac/mc/mc0/dimm2/size: 8192
+/sys/devices/system/edac/mc/mc1/dimm0/size: 8192
+/sys/devices/system/edac/mc/mc1/dimm2/size: 8192
+$ for file in $(ls /sys/devices/system/edac/mc/mc*/dimm*/dimm_dev_type); do printf '%s: ' "$file";  cat "$file"; done
+/sys/devices/system/edac/mc/mc0/dimm0/dimm_dev_type: x8
+/sys/devices/system/edac/mc/mc0/dimm2/dimm_dev_type: x8
+/sys/devices/system/edac/mc/mc1/dimm0/dimm_dev_type: x8
+/sys/devices/system/edac/mc/mc1/dimm2/dimm_dev_type: x8
+$ for file in $(ls /sys/devices/system/edac/mc/mc*/dimm*/dimm_mem_type); do printf '%s: ' "$file";  cat "$file"; done
+/sys/devices/system/edac/mc/mc0/dimm0/dimm_mem_type: Unbuffered-DDR4
+/sys/devices/system/edac/mc/mc0/dimm2/dimm_mem_type: Unbuffered-DDR4
+/sys/devices/system/edac/mc/mc1/dimm0/dimm_mem_type: Unbuffered-DDR4
+/sys/devices/system/edac/mc/mc1/dimm2/dimm_mem_type: Unbuffered-DDR4
+$ for file in $(ls /sys/devices/system/edac/mc/mc*/dimm*/dimm_location); do printf '%s: ' "$file";  cat "$file"; done
+/sys/devices/system/edac/mc/mc0/dimm0/dimm_location: channel 0 slot 0 
+/sys/devices/system/edac/mc/mc0/dimm2/dimm_location: channel 1 slot 0 
+/sys/devices/system/edac/mc/mc1/dimm0/dimm_location: channel 0 slot 0 
+/sys/devices/system/edac/mc/mc1/dimm2/dimm_location: channel 1 slot 0 
+$ for file in $(ls /sys/devices/system/edac/mc/mc*/dimm*/dimm_edac_mode); do printf '%s: ' "$file";  cat "$file"; done
+/sys/devices/system/edac/mc/mc0/dimm0/dimm_edac_mode: SECDED
+/sys/devices/system/edac/mc/mc0/dimm2/dimm_edac_mode: SECDED
+/sys/devices/system/edac/mc/mc1/dimm0/dimm_edac_mode: SECDED
+/sys/devices/system/edac/mc/mc1/dimm2/dimm_edac_mode: SECDED
+
+# EDAC_SECDED
+#   Single bit error correction, Double detection
+
+
+/sys/module/edac_core/parameters$ for file in $(ls /sys/module/edac_core/parameters); do printf '%s: ' "$file";  cat "$file"; done
+check_pci_errors: 0
+edac_mc_log_ce: 1
+edac_mc_log_ue: 1
+edac_mc_panic_on_ue: 0
+edac_mc_poll_msec: 1000
+edac_pci_panic_on_pe: 0
+
+# Enable syslog to log error indicating errors that have been detected
+# CE: Correctable Error
+# UE: Uncorrectable Error
+/sys/module/edac_core/parameters/edac_mc_log_ce
+/sys/module/edac_core/parameters/edac_mc_log_ue
+
+# An uncorrectable error will cause a machine panic
+$ echo 1 > /sys/module/edac_core/parameters/edac_mc_panic_on_ue
+
+# Panic when a Parity Error has been detected
+$ echo 1 > /sys/module/edac_core/parameters/edac_pci_panic_on_pe
+
+# /sys/module/edac_core/parameters/edac_mc_poll_msec
+# The time period, in milliseconds, for polling for error information
+# Too small a value wastes resources.  Too large a value might delay
+# necessary handling of errors and might loose valuable information for
+# locating the error.
+
+# Show information about the EDAC driver and the hardware it's managing
+$ dmesg | grep EDAC
