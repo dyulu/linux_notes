@@ -1,0 +1,474 @@
+# kexec: a system call that enables you to load and boot into another kernel from the currently running kernel
+#        performs the function of the boot loader from within the kernel
+# The primary difference between a standard system boot and a kexec boot:
+#   hardware initialization normally performed by BIOS or firmware is not performed during a kexec boot
+#
+# CONFIG_KEXEC=y
+#
+
+# Low memory (ZONE_NORMAL):
+#   the portion of memory that the kernel can directly address
+#   used for kernel code and data structures
+#   size is limited by the architecture of the system, e.g.,
+#     on a 32-bit system, max addressable space is 4 GB
+#     typically only a portion of this (up to 1 GB) is allocated to low memory
+# High memory (ZONE_HIGHMEM):
+#   the portion of memory that the kernel cannot directly address
+#   To use high memory, the kernel must set up special mappings to access it
+
+# Setting the crashkernel parameter will reserving a portion of low memory for the crash kernel
+# This is because the crash kernel needs to be in memory that can be directly addressed by the kernel
+# 
+# crashkernel=size[KMG][@offset[KMG]]
+# crashkernel=range1:size1[,range2:size2,...][@offset]
+# crashkernel=size[KMG],high
+# crashkernel=size[KMG],low
+
+# nokaslr
+# When CONFIG_RANDOMIZE_BASE is set, this disables kernel and module base offset ASLR
+#   (Address Space Layout Randomization)
+# With kernel address space layout randomization (KASLR), the kernel is loaded to a random location in memory
+# Loading the kernel to a random location can protect against attacks that rely on knowledge of the kernel addresses
+
+# When a kernel panic occurs a new kernel can boot via kexec
+# It is in the middle of a kernel crash if /proc/vmcore exists and is not empty
+# Use makedumpfile to scan the memory of the previously running kernel
+#   and save any in-use memory into a dump file in /var/crash
+
+# Load the new kernel upon panic
+-p
+--load-panic
+
+# Use kernel command line from running system
+--reuse-cmdline
+
+# Set the kernel command line to STRING
+--command-line=STRING
+--append=STRING       Set the kernel command line to STRING
+
+# Example kexec with blacklisting kernel modules which are known to cause problems with kernel crash dumps
+# https://www.kernel.org/doc/Documentation/admin-guide/kernel-parameters.txt
+kexec --load-panic "/boot/kernel" \
+      --initrd "/boot/initid.img" \
+      --reuse-cmdline             \
+      --append "ignore_loglevel loglevel=7 console=tty1 nosplash irqpoll maxcpus=1 reset_devices nohpet usbcore.nousb module_blacklist=mlx5_core,nvme,nvme_core"
+
+
+$ kexec --help
+kexec-tools 2.0.25
+Usage: kexec [OPTION]... [kernel]
+Directly reboot into a new kernel
+
+ -h, --help           Print this help.
+ -v, --version        Print the version of kexec.
+ -f, --force          Force an immediate kexec,
+                      don't call shutdown.
+ -i, --no-checks      Fast reboot, no memory integrity checks.
+ -x, --no-ifdown      Don't bring down network interfaces.
+ -y, --no-sync        Don't sync filesystems before kexec.
+ -l, --load           Load the new kernel into the
+                      current kernel.
+ -p, --load-panic     Load the new kernel for use on panic.
+ -u, --unload         Unload the current kexec target kernel.
+                      If capture kernel is being unloaded
+                      specify -p with -u.
+ -e, --exec           Execute a currently loaded kernel.
+     --exec-live-update Execute a currently loaded xen image after
+storing the state required to live update.
+ -t, --type=TYPE      Specify the new kernel is of this type.
+     --mem-min=<addr> Specify the lowest memory address to
+                      load code into.
+     --mem-max=<addr> Specify the highest memory address to
+                      load code into.
+     --reuseinitrd    Reuse initrd from first boot.
+     --print-ckr-size Print crash kernel region size.
+     --load-preserve-context Load the new kernel and preserve
+                      context of current kernel during kexec.
+     --load-jump-back-helper Load a helper image to jump back
+                      to original kernel.
+     --load-live-update Load the new kernel to overwrite the
+                      running kernel.
+     --entry=<addr>   Specify jump back address.
+                      (0 means it's not jump back or
+                      preserve context)
+                      to original kernel.
+ -s, --kexec-file-syscall Use file based syscall for kexec operation
+ -c, --kexec-syscall  Use the kexec_load syscall for for compatibility
+                      with systems that don't support -s (default)
+ -a, --kexec-syscall-auto  Use file based syscall for kexec and fall
+                      back to the compatibility syscall when file based
+                      syscall is not supported or the kernel did not
+                      understand the image
+ -d, --debug          Enable debugging to help spot a failure.
+ -S, --status         Return 1 if the type (by default crash) is loaded,
+                      0 if not.
+
+Supported kernel file types and options: 
+multiboot2-x86
+    --command-line=STRING        Set the kernel command line to STRING.
+    --reuse-cmdline       	 Use kernel command line from running system.
+    --module="MOD arg1 arg2..."  Load module MOD with command-line "arg1..."
+                                 (can be used multiple times).
+elf-x86_64
+    --command-line=STRING Set the kernel command line to STRING
+    --append=STRING       Set the kernel command line to STRING
+    --reuse-cmdline       Use kernel command line from running system.
+    --initrd=FILE         Use FILE as the kernel's initial ramdisk.
+    --ramdisk=FILE        Use FILE as the kernel's initial ramdisk.
+    --args-linux          Pass linux kernel style options
+    --args-elf            Pass elf boot notes
+    --args-none           Jump directly from the kernel
+multiboot-x86
+    --command-line=STRING        Set the kernel command line to STRING.
+    --reuse-cmdline       	 Use kernel command line from running system.
+    --module="MOD arg1 arg2..."  Load module MOD with command-line "arg1..."
+                                 (can be used multiple times).
+elf-x86
+    --command-line=STRING Set the kernel command line to STRING
+    --append=STRING       Set the kernel command line to STRING
+    --reuse-cmdline       Use kernel command line from running system.
+    --initrd=FILE         Use FILE as the kernel's initial ramdisk.
+    --ramdisk=FILE        Use FILE as the kernel's initial ramdisk.
+    --args-linux          Pass linux kernel style options
+    --args-elf            Pass elf boot notes
+bzImage64
+    --entry-32bit         Use the kernels 32bit entry point.
+    --real-mode           Use the kernels real mode entry point.
+    --command-line=STRING Set the kernel command line to STRING.
+    --append=STRING       Set the kernel command line to STRING.
+    --reuse-cmdline       Use kernel command line from running system.
+    --initrd=FILE         Use FILE as the kernel's initial ramdisk.
+    --ramdisk=FILE        Use FILE as the kernel's initial ramdisk.
+bzImage
+    --real-mode           Use the kernels real mode entry point.
+    --command-line=STRING Set the kernel command line to STRING.
+    --append=STRING       Set the kernel command line to STRING.
+    --reuse-cmdline       Use kernel command line from running system.
+    --initrd=FILE         Use FILE as the kernel's initial ramdisk.
+    --ramdisk=FILE        Use FILE as the kernel's initial ramdisk.
+beoboot-x86
+    --real-mode           Use the kernels real mode entry point.
+nbi-x86
+
+Architecture options: 
+     --reset-vga               Attempt to reset a standard vga device
+     --serial=<port>           Specify the serial port for debug output
+     --serial-baud=<baud_rate> Specify the serial port baud rate
+     --console-vga             Enable the vga console
+     --console-serial          Enable the serial console
+     --pass-memmap-cmdline     Pass memory map via command line in kexec on panic case
+     --noefi                   Disable efi support
+     --reuse-video-type        Reuse old boot time video type blindly
+
+# With kdump, the memory image of the first kernel (called "panicked kernel") can be taken
+#   as /proc/vmcore while the second kernel (called "kdump  kernel"  or  "capture kernel")
+#   is running. This document represents /proc/vmcore as VMCORE.
+# makedumpfile makes a small DUMPFILE by compressing dump data or by excluding unnecessary
+#   pages for analysis, or both.
+# makedumpfile needs the first kernel's debug information, so that it can distinguish
+#   unnecessary pages by analyzing how the first kernel uses the memory. The information can
+#   be taken from VMLINUX or VMCOREINFO.
+
+$ makedumpfile --help
+
+LZO support:
+  enabled
+snappy support:
+  disabled ('-p' option will be ignored.)
+zstd support:
+  disabled ('-z' option will be ignored.)
+
+Usage:
+  Creating DUMPFILE:
+  # makedumpfile    [-c|-l|-p|-z|-E] [-d DL] [-e] [-x VMLINUX|-i VMCOREINFO] VMCORE
+    DUMPFILE
+
+  Creating DUMPFILE with filtered kernel data specified through filter config
+  file or eppic macro:
+  # makedumpfile    [-c|-l|-p|-z|-E] [-d DL] -x VMLINUX [--config FILTERCONFIGFILE]
+    [--eppic EPPICMACRO] VMCORE DUMPFILE
+
+  Outputting the dump data in the flattened format to the standard output:
+  # makedumpfile -F [-c|-l|-p|-z|-E] [-d DL] [-x VMLINUX|-i VMCOREINFO] VMCORE
+
+  Rearranging the dump data in the flattened format to a readable DUMPFILE:
+  # makedumpfile -R DUMPFILE
+
+  Split the dump data to multiple DUMPFILEs in parallel:
+  # makedumpfile --split [OPTION] [-x VMLINUX|-i VMCOREINFO] VMCORE DUMPFILE1
+    DUMPFILE2 [DUMPFILE3 ..]
+
+  Using multiple threads to create DUMPFILE in parallel:
+  # makedumpfile [OPTION] [-x VMLINUX|-i VMCOREINFO] --num-threads THREADNUM
+    VMCORE DUMPFILE1
+
+  Reassemble multiple DUMPFILEs:
+  # makedumpfile --reassemble DUMPFILE1 DUMPFILE2 [DUMPFILE3 ..] DUMPFILE
+
+  Generating VMCOREINFO:
+  # makedumpfile -g VMCOREINFO -x VMLINUX
+
+  Extracting the dmesg log from a VMCORE:
+  # makedumpfile --dump-dmesg [-x VMLINUX|-i VMCOREINFO] VMCORE LOGFILE
+
+
+  Creating DUMPFILE of Xen:
+  # makedumpfile [-c|-l|-p|-z|-E] [--xen-syms XEN-SYMS|--xen-vmcoreinfo VMCOREINFO]
+    VMCORE DUMPFILE
+
+  Filtering domain-0 of Xen:
+  # makedumpfile [-c|-l|-p|-z|-E] -d DL -x vmlinux VMCORE DUMPFILE
+
+  Generating VMCOREINFO of Xen:
+  # makedumpfile -g VMCOREINFO --xen-syms XEN-SYMS
+
+
+  Creating DUMPFILE from multiple VMCOREs generated on sadump diskset configuration:
+  # makedumpfile [-c|-l|-p|-z] [-d DL] -x VMLINUX --diskset=VMCORE1 --diskset=VMCORE2
+    [--diskset=VMCORE3 ..] DUMPFILE
+
+
+Available options:
+  [-c|-l|-p|-z]:
+      Compress dump data by each page using zlib for -c option, lzo for -l option
+      snappy for -p option or zstd for -z option. A user cannot specify either of
+      these options with -E option, because the ELF format does not support
+      compressed data.
+      THIS IS ONLY FOR THE CRASH UTILITY.
+
+  [-e]:
+      Exclude the page structures (vmemmap) which represent excluded pages.
+      This greatly shortens the dump of a very large memory system.
+      The --work-dir option must also be specified, as it will be used
+      to hold bitmaps and a file of page numbers that are to be excluded.
+      The -e option will cause a noncyclic dump procedure.
+      This option is only for x86_64.
+
+  [-d DL]:
+      Specify the type of unnecessary page for analysis.
+      Pages of the specified type are not copied to DUMPFILE. The page type
+      marked in the following table is excluded. A user can specify multiple
+      page types by setting the sum of each page type for Dump_Level (DL).
+      The maximum of Dump_Level is 31.
+      Note that Dump_Level for Xen dump filtering is 0 or 1 except on x86_64
+
+            |         non-
+      Dump  |  zero   private  private  user    free
+      Level |  page   cache    cache    data    page
+     -------+---------------------------------------
+         0  |
+         1  |   X
+         2  |           X
+         4  |           X        X
+         8  |                            X
+        16  |                                    X
+        31  |   X       X        X       X       X
+
+  [-L SIZE]:
+      Limit the size of the output file to SIZE bytes.
+
+  [-E]:
+      Create DUMPFILE in the ELF format.
+      This option cannot be specified with the -c, -l or -p options,
+      because the ELF format does not support compressed data.
+
+  [-x VMLINUX]:
+      Specify the first kernel's VMLINUX to analyze the first kernel's
+      memory usage.
+      The page size of the first kernel and the second kernel should match.
+
+  [-i VMCOREINFO]:
+      Specify VMCOREINFO instead of VMLINUX for analyzing the first kernel's
+      memory usage.
+      VMCOREINFO should be made beforehand by makedumpfile with -g option,
+      and it contains the first kernel's information. This option is necessary
+      if VMCORE does not contain VMCOREINFO, [-x VMLINUX] is not specified,
+      and dump_level is 2 or more.
+
+  [-g VMCOREINFO]:
+      Generate VMCOREINFO from the first kernel's VMLINUX.
+      VMCOREINFO must be generated on the system that is running the first
+      kernel. With -i option, a user can specify VMCOREINFO generated on the
+      other system that is running the same first kernel. [-x VMLINUX] must
+      be specified.
+
+  [--config FILTERCONFIGFILE]:
+      Used in conjunction with -x VMLINUX option, to specify the filter config
+      file that contains filter commands to filter out desired kernel data
+      from vmcore while creating DUMPFILE.
+
+  [--eppic EPPICMACRO]:
+      Used in conjunction with -x VMLINUX option, to specify the eppic macro
+      file that contains filter rules or directory that contains eppic macro
+      files to filter out desired kernel data from vmcore while creating DUMPFILE.
+      When directory is specified, all the eppic macros in the directory are
+      processed
+
+  [-F]:
+      Output the dump data in the flattened format to the standard output
+      for transporting the dump data by SSH.
+      Analysis tools cannot read the flattened format directly. For analysis,
+      the dump data in the flattened format should be rearranged to a readable
+      DUMPFILE by -R option.
+
+  [-R]:
+      Rearrange the dump data in the flattened format from the standard input
+      to a readable DUMPFILE.
+
+  [--split]:
+      Split the dump data to multiple DUMPFILEs in parallel. If specifying
+      DUMPFILEs on different storage devices, a device can share I/O load with
+      other devices and it reduces time for saving the dump data. The file size
+      of each DUMPFILE is smaller than the system memory size which is divided
+      by the number of DUMPFILEs.
+      This feature supports only the kdump-compressed format.
+
+  [--num-threads THREADNUM]:
+      Using multiple threads to read and compress data of each page in parallel.
+      And it will reduces time for saving DUMPFILE.
+      Note that if the usable cpu number is less than the thread number, it may
+      lead to great performance degradation.
+      This feature only supports creating DUMPFILE in kdump-compressed format from
+      VMCORE in kdump-compressed format or elf format.
+
+  [--reassemble]:
+      Reassemble multiple DUMPFILEs, which are created by --split option,
+      into one DUMPFILE. dumpfile1 and dumpfile2 are reassembled into dumpfile.
+
+  [-b <order>]
+      Specify the cache 2^order pages in ram when generating DUMPFILE before
+      writing to output. The default value is 4.
+
+  [--cyclic-buffer BUFFER_SIZE]:
+      Specify the buffer size in kilo bytes for bitmap data.
+      Filtering processing will be divided into multi cycles to fix the memory
+      consumption, the number of cycles is represented as:
+
+          num_of_cycles = system_memory / 
+                          (BUFFER_SIZE * 1024 * bit_per_bytes * page_size)
+
+      The lesser number of cycles, the faster working speed is expected.
+      By default, BUFFER_SIZE will be calculated automatically depending on
+      system memory size, so ordinary users don't need to specify this option.
+
+  [--splitblock-size SPLITBLOCK_SIZE]:
+      Specify the splitblock size in kilo bytes for analysis with --split.
+      If --splitblock N is specified, difference of each splitted dumpfile
+      size is at most N kilo bytes.
+
+  [--work-dir]:
+      Specify the working directory for the temporary bitmap file.
+      If this option isn't specified, the bitmap will be saved on memory.
+      Filtering processing has to do 2 pass scanning to fix the memory consumption,
+      but it can be avoided by using working directory on file system.
+      So if you specify this option, the filtering speed may be bit faster.
+
+  [--non-mmap]:
+      Never use mmap(2) to read VMCORE even if it supports mmap(2).
+      Generally, reading VMCORE with mmap(2) is faster than without it,
+      so ordinary users don't need to specify this option.
+      This option is mainly for debugging.
+
+  [--xen-syms XEN-SYMS]:
+      Specify the XEN-SYMS to analyze Xen's memory usage.
+
+  [--xen-vmcoreinfo VMCOREINFO]:
+      Specify the VMCOREINFO of Xen to analyze Xen's memory usage.
+
+  [--xen_phys_start XEN_PHYS_START_ADDRESS]:
+      This option is only for x86_64.
+      Specify the XEN_PHYS_START_ADDRESS, if the xen code/data is relocatable
+      and VMCORE does not contain XEN_PHYS_START_ADDRESS in the CRASHINFO.
+
+  [-X]:
+      Exclude all the user domain pages from Xen kdump's VMCORE, and extract
+      the part of Xen and domain-0.
+
+  [--diskset=VMCORE]:
+      Specify multiple VMCOREs created on sadump diskset configuration the same
+      number of times as the number of VMCOREs in increasing order from left to
+      right.
+
+  [--message-level ML]:
+      Specify the message types.
+      Users can restrict output printed by specifying Message_Level (ML) with
+      this option. The message type marked with an X in the following table is
+      printed. For example, according to the table, specifying 7 as ML means
+      progress indicator, common message, and error message are printed, and
+      this is a default value.
+      Note that the maximum value of message_level is 31.
+
+      Message | progress    common    error     debug     report
+      Level   | indicator   message   message   message   message
+     ---------+------------------------------------------------------
+            0 |
+            1 |     X
+            2 |                X
+            4 |                          X
+          * 7 |     X          X         X
+            8 |                                    X
+           16 |                                              X
+           31 |     X          X         X         X         X
+
+  [--vtop VIRTUAL_ADDRESS]:
+      This option is useful, when user debugs the translation problem
+      of virtual address. If specifying the VIRTUAL_ADDRESS, its physical
+      address is printed.
+
+  [--dump-dmesg]:
+      This option overrides the normal behavior of makedumpfile. Instead of
+      compressing and filtering a VMCORE to make it smaller, it simply
+      extracts the dmesg log from a VMCORE and writes it to the specified
+      LOGFILE. If a VMCORE does not contain VMCOREINFO for dmesg, it is
+      necessary to specify [-x VMLINUX] or [-i VMCOREINFO].
+
+  [--mem-usage]:
+      This option is currently supported on x86_64, arm64, ppc64 and s390x.
+      This option is used to show the page numbers of current system in different
+      use. It should be executed in 1st kernel. By the help of this, user can know
+      how many pages is dumpable when different dump_level is specified. It analyzes
+      the 'System Ram' and 'kernel text' program segment of /proc/kcore excluding
+      the crashkernel range, then calculates the page number of different kind per
+      vmcoreinfo. So currently /proc/kcore need be specified explicitly.
+
+  [--dry-run]:
+      Do not write the output dump file while still performing operations specified
+      by other options.  This option cannot be used with --dump-dmesg, --reassemble
+      and -g options.
+
+  [--show-stats]:
+      Set message-level to print report messages
+
+  [-D]:
+      Print debugging message.
+
+  [-f]:
+      Overwrite DUMPFILE even if it already exists.
+      Force mem-usage to work with older kernel as well.
+
+  [-h, --help]:
+      Show help message and LZO/snappy support status (enabled/disabled).
+
+  [-v]:
+      Show the version of makedumpfile.
+
+  [--check-params]:
+      Only check whether the command-line parameters are valid or not, and exit.
+      Preferable to be given as the first parameter.
+
+  VMLINUX:
+      This is a pathname to the first kernel's vmlinux.
+      This file must have the debug information of the first kernel to analyze
+      the first kernel's memory usage.
+
+  VMCORE:
+      This is a pathname to the first kernel's memory core image.
+      This argument is generally /proc/vmcore.
+
+  DUMPFILE:
+      This is a pathname to a file created by this command.
+
+  XEN-SYMS:
+      This is a pathname to the xen-syms.
+      This file must have the debug information of Xen to analyze
+      Xen's memory usage.
