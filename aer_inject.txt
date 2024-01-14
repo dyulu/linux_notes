@@ -1,0 +1,86 @@
+# https://github.com/jderrick/aer-inject/blob/master/README
+# aer-inject allows to inject PCIE AER errors on the software level into
+# a running Linux kernel. This is intended for validation of the PCIE
+# driver error recovery handler and PCIE AER core handler.
+
+# AER: Advanced Error Reporting
+# https://www.kernel.org/doc/Documentation/PCI/pcieaer-howto.txt
+# CONFIG_PCIEPORTBUS=y
+# CONFIG_PCIEAER = y
+# CONFIG_PCIEAER_INJECT=y or CONFIG_PCIEAER_INJECT=m
+
+$ aer-inject --help
+Usage: aer-inject [-s|--id=PCI_ID] [FILE]
+  or:  aer-inject -v|--version
+  or:  aer-inject -h|--help
+Inject an error into a PCIe device
+
+  PCI_ID       The [<domain>:]<bus>:<slot>.<func> of the device in
+               hex (same as lspci)
+  FILE         Error data file (use stdin if ommitted)
+
+$ for file in $(ls /usr/share/aer-inject/*); do printf '======== %s ========\n' "$file";  cat "$file"; done
+======== /usr/share/aer-inject/COR_BAD_DLLP ========
+# Inject a correctable bad TLP error into the device with header log
+# words 0 1 2 3.
+#
+# Either specify the PCI id on the command-line option or uncomment and edit
+# the PCI_ID line below using the correct PCI ID.
+#
+# Note that system firmware/BIOS may mask certain errors and/or not report
+# header log words.
+#
+AER
+# PCI_ID [WWWW:]XX.YY.Z
+COR_STATUS BAD_DLLP
+HEADER_LOG 0 1 2 3
+======== /usr/share/aer-inject/COR_BAD_TLP ========
+# Inject a correctable bad TLP error into the device with header log
+# words 0 1 2 3.
+#
+# Either specify the PCI id on the command-line option or uncomment and edit
+# the PCI_ID line below using the correct PCI ID.
+#
+# Note that system firmware/BIOS may mask certain errors and/or not report
+# header log words.
+#
+AER
+# PCI_ID [WWWW:]XX.YY.Z
+COR_STATUS BAD_TLP
+HEADER_LOG 0 1 2 3
+======== /usr/share/aer-inject/COR_RCVR ========
+# Inject a correctable bad TLP error into the device with header log
+# words 0 1 2 3.
+#
+# Either specify the PCI id on the command-line option or uncomment and edit
+# the PCI_ID line below using the correct PCI ID.
+#
+# Note that system firmware/BIOS may mask certain errors and/or not report
+# header log words.
+#
+AER
+# PCI_ID [WWWW:]XX.YY.Z
+COR_STATUS RCVR
+HEADER_LOG 0 1 2 3
+
+$ ls /sys/bus/pci/devices/0000:16:01.0/aer*
+/sys/bus/pci/devices/0000:16:01.0/aer_dev_correctable  /sys/bus/pci/devices/0000:16:01.0/aer_rootport_total_err_cor
+/sys/bus/pci/devices/0000:16:01.0/aer_dev_fatal        /sys/bus/pci/devices/0000:16:01.0/aer_rootport_total_err_fatal
+/sys/bus/pci/devices/0000:16:01.0/aer_dev_nonfatal     /sys/bus/pci/devices/0000:16:01.0/aer_rootport_total_err_nonfatal
+
+$ aer-inject --id=16:01.0 /usr/share/aer-inject/COR_RCVR
+$ echo $?
+0
+$ cat /sys/bus/pci/devices/0000:16:01.0/aer_dev_correctable
+RxErr 1
+BadTLP 0
+BadDLLP 0
+Rollover 0
+Timeout 0
+NonFatalErr 0
+CorrIntErr 0
+HeaderOF 0
+TOTAL_ERR_COR 1
+
+$ cat /sys/bus/pci/devices/0000:16:01.0/aer_rootport_total_err_cor
+1
