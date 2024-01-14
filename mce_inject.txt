@@ -1,0 +1,64 @@
+# mce-inject: Inject machine checks into x86 kernel for testing
+# machine checks are internal CPU errors
+
+$ modprobe mce_inject
+$ tree /sys/kernel/debug/mce-inject/
+/sys/kernel/debug/mce-inject/
+├── README
+├── addr
+├── bank
+├── cpu
+├── flags
+├── misc
+├── status
+└── synd
+
+0 directories, 8 files
+
+$ cat /sys/kernel/debug/mce-inject/README 
+Description of the files and their usages:
+
+Note1: i refers to the bank number below.
+Note2: See respective BKDGs for the exact bit definitions of the files below
+as they mirror the hardware registers.
+
+status:	 Set MCi_STATUS: the bits in that MSR control the error type and
+	 attributes of the error which caused the MCE.
+
+misc:	 Set MCi_MISC: provide auxiliary info about the error. It is mostly
+	 used for error thresholding purposes and its validity is indicated by
+	 MCi_STATUS[MiscV].
+
+synd:	 Set MCi_SYND: provide syndrome info about the error. Only valid on
+	 Scalable MCA systems, and its validity is indicated by MCi_STATUS[SyndV].
+
+addr:	 Error address value to be written to MCi_ADDR. Log address information
+	 associated with the error.
+
+cpu:	 The CPU to inject the error on.
+
+bank:	 Specify the bank you want to inject the error into: the number of
+	 banks in a processor varies and is family/model-specific, therefore, the
+	 supplied value is sanity-checked. Setting the bank value also triggers the
+	 injection.
+
+flags:	 Injection type to be performed. Writing to this file will trigger a
+	 real machine check, an APIC interrupt or invoke the error decoder routines
+	 for AMD processors.
+
+	 Allowed error injection types:
+	  - "sw": Software error injection. Decode error to a human-readable 
+	    format only. Safe to use.
+	  - "hw": Hardware error injection. Causes the #MC exception handler to 
+	    handle the error. Be warned: might cause system panic if MCi_STATUS[PCC] 
+	    is set. Therefore, consider setting (debugfs_mountpoint)/mce/fake_panic 
+	    before injecting.
+	  - "df": Trigger APIC interrupt for Deferred error. Causes deferred 
+	    error APIC interrupt handler to handle the error if the feature is 
+	    is present in hardware. 
+	  - "th": Trigger APIC interrupt for Threshold errors. Causes threshold 
+	    APIC interrupt handler to handle the error. 
+
+
+# Inject error to bank 0
+$ echo 0 > /sys/kernel/debug/mce-inject/bank
