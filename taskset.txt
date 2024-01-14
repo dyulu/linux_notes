@@ -1,0 +1,114 @@
+######################################################################################
+# taskset:
+#   set or retrieve a running process's CPU affinity
+#   launch a new command with a given CPU affinity
+# Linux scheduler will honor the given CPU affinity and the process will
+#   not run on any other CPUs
+# Linux scheduler also supports natural CPU affinity:
+#   the scheduler attempts to keep processes on the same CPU as long as
+#   practical for performance reasons
+# cpu mask: hex with or without a leading 0x
+#   0x00000001: processor #0
+#   0x00000003: processors #0 and #1
+#   0xFFFFFFFF: processors #0 through #31
+#   32:         processors #1, #4, and #5 (hex 32 without leading 0x)
+# --cpu-list:
+#   0-2,6:      processors #0, #1, #2, and #6
+#   0-10:2:     processors #0, #2, #4, #6, #8 and #10 (suffix :N -- stride in the range)
+# When taskset returns, it is guaranteed that the given program has been
+#   scheduled to a legal CPU
+$ taskset -h
+Usage: taskset [options] [mask | cpu-list] [pid|cmd [args...]]
+
+Show or change the CPU affinity of a process.
+
+Options:
+ -a, --all-tasks         operate on all the tasks (threads) for a given pid
+ -p, --pid               operate on existing given pid
+ -c, --cpu-list          display and specify cpus in list format
+ -h, --help              display this help
+ -V, --version           display version
+
+The default behavior is to run a new command:
+    taskset 03 sshd -b 1024
+You can retrieve the mask of an existing task:
+    taskset -p 700
+Or set it:
+    taskset -p 03 700
+List format uses a comma-separated list instead of a mask:
+    taskset -pc 0,3,7-11 700
+Ranges in list format can take a stride argument:
+    e.g. 0-31:2 is equivalent to mask 0x55555555
+
+For more details see taskset(1).
+
+######################################################################################
+# isolcpus:
+#   configured statically at boot time
+#   those CPUs are effectively invisible to Linux scheduler
+#   prevent all kernel tasks from running there
+#   prevent Linux scheduler load balancer from placing tasks on those CPUs too
+#   Only way to get tasks onto the list of isolated CPUs is with taskset
+
+######################################################################################
+$ lscpu | grep CPU.s
+CPU(s):                             8
+On-line CPU(s) list:                0-7
+CPU(s) scaling MHz:                 100%
+NUMA node0 CPU(s):                  0-7
+
+$ cat /proc/cmdline | grep isolcpus
+...... isolcpus=1-N ......
+
+$ cat /sys/devices/system/cpu/isolated
+1-7
+
+$ cat /sys/devices/system/cpu/possible 
+0-7
+
+$ cat /sys/devices/system/cpu/present
+0-7
+
+$ cat /sys/devices/system/cpu/online
+0-7
+
+# $$: the PID of the current process
+# Show the CPUs that are in the affinity mask inherited by the current shell process
+$ cat /proc/$$/status | grep -i cpu
+Cpus_allowed:	1
+Cpus_allowed_list:	0
+
+# PID 1: PID for the first task launched by the kernel; /sbin/init
+$ cat /proc/1/status | grep -i cpu
+Cpus_allowed:	1
+Cpus_allowed_list:	0
+
+######################################################################################
+# PID 1: PID for the first task launched by the kernel; /sbin/init
+$ taskset -cp 1
+pid 1's current affinity list: 0
+$ taskset -p 1
+pid 1's current affinity mask: 1
+$ taskset -cp 0,1 1
+pid 1's current affinity list: 0
+pid 1's new affinity list: 0,1
+$ taskset -p 1
+pid 1's current affinity mask: 3
+$ taskset -cp 1
+pid 1's current affinity list: 0,1
+$ taskset -cp 0,1,2 1
+pid 1's current affinity list: 0,1
+pid 1's new affinity list: 0-2
+$ taskset -p 1
+pid 1's current affinity mask: 7
+$ taskset -cp 1
+pid 1's current affinity list: 0-2
+$ taskset -cp 0,1,2,3 1
+pid 1's current affinity list: 0-2
+pid 1's new affinity list: 0-3
+$ taskset -p 1
+pid 1's current affinity mask: f
+$ taskset -cp 1
+pid 1's current affinity list: 0-3
+$ taskset -p 1 | awk '{print $NF}'
+f
