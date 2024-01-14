@@ -1,0 +1,250 @@
+#========================= Log rotation with logrotate: rotate based on time =====================================
+# logrotate: 
+#   Allow automatic rotation, compression, removal, and mailing of log files
+#   Each log file may be handled daily, weekly, monthly, or when it grows too large
+#   Normally run as a daily cron job; will not modify a log more than once in one day unless:
+#       the criterion for that log is based on the log's size and logrotate is being run more than once each day,
+#       or unless the -f or --force option is used.
+# configfile:
+#   Any number of config files may be given on the command line
+#   Later config files may override the options given in earlier files
+#   Normally, a single config file which includes any other config files which are needed should be used
+#   /etc/logrotate.conf    # include /etc/logrotate.d
+#   /etc/logrotate.d/
+
+#-----------------------------------------------------------------------------------------------------------------
+$ ls /etc/cron*
+/etc/crontab
+
+/etc/cron.d:
+e2scrub_all
+
+/etc/cron.daily:
+apt-compat  dpkg  exim4-base  lighttpd	logrotate  man-db
+
+/etc/cron.hourly:
+
+/etc/cron.monthly:
+
+/etc/cron.weekly:
+man-db
+
+$ cat /etc/crontab 
+# /etc/crontab: system-wide crontab
+# Unlike any other crontab you don't have to run the `crontab'
+# command to install the new version when you edit this file
+# and files in /etc/cron.d. These files also have username fields,
+# that none of the other crontabs do.
+
+SHELL=/bin/sh
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+
+# Example of job definition:
+# .---------------- minute (0 - 59)
+# |  .------------- hour (0 - 23)
+# |  |  .---------- day of month (1 - 31)
+# |  |  |  .------- month (1 - 12) OR jan,feb,mar,apr ...
+# |  |  |  |  .---- day of week (0 - 6) (Sunday=0 or 7) OR sun,mon,tue,wed,thu,fri,sat
+# |  |  |  |  |
+# *  *  *  *  * user-name command to be executed
+17 *	* * *	root    cd / && run-parts --report /etc/cron.hourly
+25 6	* * *	root	test -x /usr/sbin/anacron || ( cd / && run-parts --report /etc/cron.daily )
+47 6	* * 7	root	test -x /usr/sbin/anacron || ( cd / && run-parts --report /etc/cron.weekly )
+52 6	1 * *	root	test -x /usr/sbin/anacron || ( cd / && run-parts --report /etc/cron.monthly )
+#
+
+$ /usr/sbin/anacron
+/usr/sbin/anacron: Command not found.
+
+$ cat /etc/cron.daily/logrotate 
+#!/bin/sh
+
+# skip in favour of systemd timer
+if [ -d /run/systemd/system ]; then
+    exit 0
+fi
+
+# this cronjob persists removals (but not purges)
+if [ ! -x /usr/sbin/logrotate ]; then
+    exit 0
+fi
+
+/usr/sbin/logrotate /etc/logrotate.conf
+EXITVALUE=$?
+if [ $EXITVALUE != 0 ]; then
+    /usr/bin/logger -t logrotate "ALERT exited abnormally with [$EXITVALUE]"
+fi
+exit $EXITVALUE
+
+#-----------------------------------------------------------------------------------------------------------------
+$ ls /etc/logrotate*
+/etc/logrotate.conf
+
+/etc/logrotate.d:
+alternatives  apt  btmp  chrony  dpkg  exim4-base  exim4-paniclog  lighttpd  rsyslog  wtmp
+
+
+$ cat /etc/logrotate.conf 
+# see "man logrotate" for details
+
+# global options do not affect preceding include directives
+
+# rotate log files weekly
+weekly
+
+# keep 4 weeks worth of backlogs
+rotate 4
+
+# create new (empty) log files after rotating old ones
+create
+
+# use date as a suffix of the rotated file
+#dateext
+
+# uncomment this if you want your log files compressed
+#compress
+
+# packages drop log rotation information into this directory
+include /etc/logrotate.d
+
+# system-specific logs may also be configured here.
+
+
+$ cat /etc/logrotate.d/apt
+/var/log/apt/term.log {
+  rotate 12
+  monthly
+  compress
+  missingok
+  notifempty
+}
+
+/var/log/apt/history.log {
+  rotate 12
+  monthly
+  compress
+  missingok
+  notifempty
+}
+
+
+$ cat /etc/logrotate.d/rsyslog 
+/var/log/syslog
+/var/log/mail.info
+/var/log/mail.warn
+/var/log/mail.err
+/var/log/mail.log
+/var/log/daemon.log
+/var/log/kern.log
+/var/log/auth.log
+/var/log/user.log
+/var/log/lpr.log
+/var/log/cron.log
+/var/log/debug
+/var/log/messages
+{
+	rotate 7
+	weekly
+	missingok
+	notifempty
+	compress
+	delaycompress
+	sharedscripts
+	postrotate
+		/usr/lib/rsyslog/rsyslog-rotate
+	endscript
+}
+
+$ cat /usr/lib/rsyslog/rsyslog-rotate
+#!/bin/sh
+
+if [ -d /run/systemd/system ]; then
+    systemctl kill -s HUP rsyslog.service
+else
+    invoke-rc.d rsyslog rotate > /dev/null
+fi
+
+#-----------------------------------------------------------------------------------------------------------------
+$ logrotate --help
+Usage: logrotate [OPTION...] <configfile>
+  -d, --debug               Don't do anything, just test and print debug
+                            messages
+  -f, --force               Force file rotation
+  -m, --mail=command        Command to send mail (instead of `/usr/bin/mail')
+  -s, --state=statefile     Path of state file
+      --skip-state-lock     Do not lock the state file
+  -v, --verbose             Display messages during rotation
+  -l, --log=logfile         Log file or 'syslog' to log to syslog
+      --version             Display version information
+
+Help options:
+  -?, --help                Show this help message
+      --usage               Display brief usage message
+
+#========================= Log rotation with rsyslog: rotate based on log size ====================================
+# https://rsyslog.readthedocs.io/en/latest/tutorials/log_rotation_fix_size.html
+# https://www.rsyslog.com/doc/master/configuration/output_channels.html
+
+# Have limited disc space available for logging
+# Use Output Channels for fixed-length syslog files
+#   Add output channel directives to rsyslog.conf
+# Output channel directives:
+#   $outchannel name,file-name,max-size,action-on-max-size
+#     name:               the name of the output channel (not the file)
+#     file-name:          the file name to be written to
+#     max-size:           the maximum allowed size
+#     action-on-max-size: a command to be issued when the max size is reached; command always has exactly one parameter
+# ryslog.conf instruct rsyslog to log everything to file-name until max-size is reached
+#   when max-size is reached, itwill perform the action-on-max-size
+
+# Examples of output channel directives
+$outchannel oc_syslog,/var/log/syslog,10485760,/usr/sbin/logrotate /etc/logrotate.syslog
+$outchannel oc_user,/var/log/user.log,5242880,/usr/sbin/logrotate /etc/logrotate.user
+
+# As part of /etc/rsyslog.conf
+*.*;auth,authpriv.none;daemon.none     :omfile:$oc_syslog
+user.*                                 :omfile:$oc_user
+
+# As part of logrotate configurations to be used with output channel directives
+#   Note size is specified as 1 byte to in logrotate config files so rotation will occur when called
+#   size: log files are rotated only if they grow bigger than size bytes
+#         This option is mutually exclusive with the time interval options, and it causes log files
+#           to be rotated without regard for the last rotation time, if specified after the time criteria 
+#           (the last specified option takes the precedence)
+$ cat /etc/logrotate.syslog/logrotate.syslog.conf
+/var/log/syslog
+{
+        rotate 7
+        size 1
+        missingok
+        notifempty
+        delaycompress
+        compress
+        postrotate
+                /usr/lib/rsyslog/rsyslog-rotate
+        endscript
+}
+
+$ cat /etc/logrotate.user/logrotate.user.conf 
+/var/log/user.log
+{
+        rotate 7
+        size 1
+        missingok
+        notifempty
+        compress
+        delaycompress
+        sharedscripts
+        postrotate
+                /usr/lib/rsyslog/rsyslog-rotate
+        endscript
+}
+
+$ cat /usr/lib/rsyslog/rsyslog-rotate 
+#!/bin/sh
+
+if [ -d /run/systemd/system ]; then
+    systemctl kill -s HUP rsyslog.service
+else
+    invoke-rc.d rsyslog rotate > /dev/null
+fi
