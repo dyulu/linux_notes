@@ -1,0 +1,50 @@
+# hwclock can set or view Hardware Clock, i.e., Real-Time Clock (RTS) or BIOS clock
+# Hardware Clock is different from the clock that the OS manages
+# Hardware Clock runs when the system is running, and remains running when system is powered off
+# Configuration of Hardware Clock can be modified from BIOS
+
+$ hwclock --help
+
+Usage:
+ hwclock [function] [option...]
+
+Time clocks utility.
+
+Functions:
+ -r, --show                      display the RTC time
+     --get                       display drift corrected RTC time
+     --set                       set the RTC according to --date
+ -s, --hctosys                   set the system time from the RTC
+ -w, --systohc                   set the RTC from the system time
+     --systz                     send timescale configurations to the kernel
+ -a, --adjust                    adjust the RTC to account for systematic drift
+     --param-get <param>         display the RTC parameter
+     --param-set <param>=<value> set the RTC parameter
+     --predict                   predict the drifted RTC time according to --date
+
+Options:
+ -u, --utc                       the RTC timescale is UTC
+ -l, --localtime                 the RTC timescale is Local
+ -f, --rtc <file>                use an alternate file to /dev/rtc0
+     --directisa                 use the ISA bus instead of /dev/rtc0 access
+     --date <time>               date/time input for --set and --predict
+     --delay <sec>               delay used when set new RTC time
+     --update-drift              update the RTC drift factor
+     --noadjfile                 do not use /etc/adjtime
+     --adjfile <file>            use an alternate file to /etc/adjtime
+     --test                      dry run; implies --verbose
+ -v, --verbose                   display more details
+
+ -h, --help                      display this help
+ -V, --version                   display version
+
+Arguments:
+ <param> is either a numeric RTC parameter value or one of these aliases:
+   - features: supported features (0x0)
+   - correction: time correction (0x1)
+   - bsm: backup switch mode (0x2)
+   See Kernel's include/uapi/linux/rtc.h for parameters and values.
+
+ <param> and <value> accept hexadecimal values if prefixed with 0x, otherwise decimal.
+
+For more details see hwclock(8).
