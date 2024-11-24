@@ -1,0 +1,81 @@
+Linux device driver:
+    a module that interacts with the hardware at a low level
+    provide an interface for the operating system to use the hardware
+
+Initialization of a driver:
+    Module Loading:
+        load driver module into kernel
+        occur at boot time for built-in drivers
+        manually for loadable kernel modules using insmod or modprobe
+    Entry Point Invocation:
+        kernel invokes the module's entry point
+        module_init: built-in driver
+        init_module: loadable kernel module
+    Driver Registration:
+        driver registers itself with the appropriate subsystem, e.g., USB, PCI, etc
+        done by calling a registration function provided by the subsystem, such as
+            usb_register for USB drivers
+            pci_register_driver for PCI drivers
+        driver provides a structure that describes the driver and the devices it can handle during registration
+    Device Discovery:
+        subsystem will typically call a probe function provided by the driver for each device that matches the driver's description
+        probe function is responsible for initializing the device and setting up any resources the device needs
+    Device Initialization:
+        driver initializes the device during probe function
+        can involve mapping device memory, setting up interrupts, initializing device registers, and other hardware-specific tasks
+    Interface Setup:
+        sets up the interface that will be used by the rest of the system to interact with the device
+        can involve registering a character device, creating sysfs entries, setting up a network interface, or other tasks depending on the type of device
+
+Initcalls:
+    pointers to functions, which are executed at different stages of the boot process
+    Linux kernel uses a mechanism called "initcalls" to initialize different subsystems during boot time
+    cmdline option for debug initcalls:
+        initcall_debug
+        kernel prints a message to the kernel log for each initcall that is executed
+        view the message using dmesg or examining /var/log/kern.log
+
+PCI subsystem:
+    Early Initcall: early_initcall
+        executed very early in the boot process
+        may be used to perform preliminary setup or configuration of the PCI infrastructure
+    Core Initcall: core_initcall
+        used to initialize core system components
+        may involve setting up the basic PCI infrastructure, such as the PCI bus and the PCI devices
+    Postcore Initcall: postcore_initcall
+        executed after the core initcall level
+        may involve further setup or configuration of the PCI infrastructure
+    Arch Initcall: arch_initcall
+        initialize architecture-specific components
+        may involve setting up architecture-specific aspects of the PCI infrastructure
+    Subsystem Initcall: subsys_initcall
+        used to initialize subsystems
+        may involve initializing the PCI driver core and registering the PCI bus type
+    FS Initcall: fs_initcall
+        used to initialize filesystem-related components
+        not directly related to the PCI subsystem
+        worth noting that this level occurs after the subsystem initcall level
+        ensure that the PCI subsystem is fully initialized before any filesystems that might depend on it are initialized
+    FS Initcall Sync: fs_initcall_sync
+         used for initialization routines that need to be run synchronously
+         the kernel will wait for these routines to complete before proceeding
+    Device Initcall: device_initcall
+        used to initialize device drivers
+        individual PCI device drivers would be initialized
+        each PCI driver would use the module_init macro to specify its initialization function
+    Late Initcall: late_initcall
+        executed after all the previous levels
+        may be used for any final setup or configuration tasks that need to occur after all the device drivers have been initialized
+
+Each of these initcall macros takes a function with no arguments and no return value.
+The function is then called at the appropriate time during the boot process.
+For example: to have my_init function called during the core_initcall stage of the boot process
+static int __init my_init(void)
+{
+    /* Initialization code here */
+    return 0;
+}
+core_initcall(my_init);
+
+LINUX_BOOTARGS for logging initcall:
+    initcall_debug
