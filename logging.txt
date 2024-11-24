@@ -1,3 +1,13 @@
+# Change loglevel at runtime
+# /proc/sys/kernel/printk
+# Current Console Log Level; Default Message Log Level; Minimum Console Log Level; Default Console Log Level
+cat /proc/sys/kernel/printk
+echo "4 4 1 7" > /proc/sys/kernel/printk
+
+# Can change kernel.printk in /etc/sysctl.conf
+#     or create a new file in the /etc/sysctl.d/ with the desired value
+# Run sysctl -p to apply changes
+
 
 # syslog: started in 1980, only supports UDP at the beginning
 #         development stopped for Linux since 2007
