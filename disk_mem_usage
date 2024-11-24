@@ -30,3 +30,63 @@ vmstat -s        # much like proc cmd
 top              # check memory and cpu usage per process
 htop             # shows memory usage along with various other details
 dmidecode -t 17  # hardware information about the installed RAM
+
+
+
+$ sudo df -h /var/
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/sda1       77G   55G   19G  75%  /
+
+# -s: summary
+# -h: human readable
+$ sudo du -sh /var/
+20G	/var/
+
+# -h: sort by human readable numbers
+$ sudo du -sh /var/* | sort -h
+0	/var/lock
+0	/var/run
+4.0K	/var/local
+4.0K	/var/opt
+20K	/var/mail
+52K	/var/spool
+2.5M	/var/backups
+13M	/var/tmp
+20M	/var/log
+121M	/var/cache
+20G	/var/lib
+
+# -dN, --max-depth=N: the total for a directory (or file, with --all) only if it is N or fewer levels below
+# --max-depth=0: the same as --summarize, -s
+$ sudo du -d1 -h /var/ | sort -h
+4.0K	/var/local
+4.0K	/var/opt
+20K	/var/mail
+52K	/var/spool
+2.5M	/var/backups
+13M	/var/tmp
+20M	/var/log
+121M	/var/cache
+20G	/var/
+20G	/var/lib
+
+$ sudo du -d1 -ah /var/ | sort -h
+0	/var/lock
+0	/var/run
+4.0K	/var/local
+4.0K	/var/opt
+20K	/var/mail
+52K	/var/spool
+2.5M	/var/backups
+13M	/var/tmp
+20M	/var/log
+121M	/var/cache
+20G	/var/
+20G	/var/lib
+
+
+# -a: all files and directories recursively
+$ sudo du -ah /var/lib/dhcp
+16K	/var/lib/dhcp/dhclient.eth0.leases
+4.0K	/var/lib/dhcp/dhclient.ens111.leases
+24K	/var/lib/dhcp
