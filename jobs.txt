@@ -1,0 +1,116 @@
+# Job: a process that is managed by the shell
+#      can be running in the foreground, background, or stopped
+
+# List all jobs
+jobs
+
+# Stop a foreground job and move it to the background in a stopped state
+Ctrl + Z
+
+# Resume a stopped job in the foreground
+fg %job_id
+
+# Resume a stopped job in the background
+bg %job_id
+
+# Kill jobs
+kill %job_id       # send SIGTERM signal to the job
+kill -9 %job_id    # send SIGKILL signal to the job
+
+#### Helps
+$ jobs --help
+jobs: jobs [-lnprs] [jobspec ...] or jobs -x command [args]
+    Display status of jobs.
+    
+    Lists the active jobs.  JOBSPEC restricts output to that job.
+    Without options, the status of all active jobs is displayed.
+    
+    Options:
+      -l	lists process IDs in addition to the normal information
+      -n	lists only processes that have changed status since the last
+    		notification
+      -p	lists process IDs only
+      -r	restrict output to running jobs
+      -s	restrict output to stopped jobs
+    
+    If -x is supplied, COMMAND is run after all job specifications that
+    appear in ARGS have been replaced with the process ID of that job's
+    process group leader.
+    
+    Exit Status:
+    Returns success unless an invalid option is given or an error occurs.
+    If -x is used, returns the exit status of COMMAND.
+
+$ fg --help
+fg: fg [job_spec]
+    Move job to the foreground.
+    
+    Place the job identified by JOB_SPEC in the foreground, making it the
+    current job.  If JOB_SPEC is not present, the shell's notion of the
+    current job is used.
+    
+    Exit Status:
+    Status of command placed in foreground, or failure if an error occurs.
+
+$ bg --help
+bg: bg [job_spec ...]
+    Move jobs to the background.
+    
+    Place the jobs identified by each JOB_SPEC in the background, as if they
+    had been started with `&'.  If JOB_SPEC is not present, the shell's notion
+    of the current job is used.
+    
+    Exit Status:
+    Returns success unless job control is not enabled or an error occurs.
+
+# Where JOB_SPEC can be any of the following:
+#   %n - where n is the job number
+#   %abc - refers to a job started by a command beginning with abc
+#   %?abc - refers to a job started by a command containing abc
+#   %- - specifies the previous job
+
+#### Example 1
+$ jobs -l
+$ sleep 500
+^Z
+[1]+  Stopped                 sleep 500
+$ jobs -l
+[1]+ 236756 Stopped                 sleep 500
+$ bg %1
+[1]+ sleep 500 &
+$ jobs -l
+[1]+ 236756 Running                 sleep 500 &
+$ fg %1
+sleep 500
+
+^Z
+[1]+  Stopped                 sleep 500
+$ kill %1
+
+[1]+  Stopped                 sleep 500
+$ jobs -l
+[1]+ 236756 Terminated              sleep 500
+$ jobs -l
+$ 
+
+#### Example 2
+$ sleep 500&
+[1] 237984
+$ sleep 1000&
+[2] 238007
+$ jobs -l
+[1]- 237984 Running                 sleep 500 &
+[2]+ 238007 Running                 sleep 1000 &
+$ echo $!               # Print the PID of the last job; can use kill $! to kill last job
+238007
+$ jobs -p
+237984
+238007
+$ kill $(jobs -p)
+$ jobs -p
+237984
+238007
+[1]-  Terminated              sleep 500
+[2]+  Terminated              sleep 1000
+$ jobs -p
+$ 
