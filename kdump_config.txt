@@ -1,0 +1,228 @@
+
+# kdump-config: configure kdump, check status, or save a vmcore file
+# /etc/default/kdump-tools: configuration file
+# /sys/kernel/kexec_crash_loaded: exist and has a value of 1 for current kernel to support kdump
+# need crashkernel= command line parameter set when booting the kernel
+# /etc/init.d/kdump-tools: init script to automatically load a kdump kernel, or save a vmcore and reboot
+# /var/crash/kernel_link: a link to the current debug kernel
+# /var/crash/kexec_cmd: the last kexec_cmd executed by kdump-config
+# /var/lib/kdump/vmlinuz: symbolic link pointing to the current kernel file in /boot
+# /var/lib/kdump/initrd.img: symbolic  link  pointing to the initrd.img file with the current kernel version in /boot
+# /proc/vmcore: the core file
+
+$ kdump-config help
+Usage:
+kdump-config {help|test|show|status|load|unload|savecore|propagate|symlinks kernel-version}"
+  help      - print this page
+  test      - Do a dry-run of kdump kernel load command by showing
+              the kernels and parameters that will be used and echo'ing
+              the kexec command. The kexec command will not be executed.
+              If using fadump, check if required sysfs directories exist.
+  show      - Show dump mode, status, any current parameters.
+              Show kexec command for kdump.
+  status    - evaluate /sys/kernel/{kexec_crash_loaded,fadump_registered}
+              depending on dump mode. Print appropriate message
+  load      - Locate the kdump kernel, debug kernel, and establish links for
+              makedumpfile.  Then load the kdump kernel using kexec
+              If using fadump, register.
+  unload    - unload the kdump kernel using kexec
+              If using fadump, unregister.
+  savecore  - use previously made links to save /proc/vmcore
+  propagate - Send public ssh key to remote host for passwordless connection
+  symlinks  - Verify and create vmlinuz and initrd.img links in /var/lib/kdump
+              according to the provided kernel version. If the target
+              initrd.img file is absent, it will create it.
+
+$  cat /sys/kernel/{kexec_crash_loaded,fadump_registered}
+1
+cat: /sys/kernel/fadump_registered: No such file or directory
+
+$ kdump-config status
+current state   : ready to kdump
+
+$ kdump-config unload
+unloaded kdump kernel.
+
+$ kdump-config status
+current state   : Not ready to kdump
+
+$ kdump-config load
+Creating symlink /var/lib/kdump/vmlinuz.
+Creating symlink /var/lib/kdump/initrd.img.
+loaded kdump kernel.
+
+$ kdump-config status
+current state   : ready to kdump
+
+$ cat /etc/default/kdump-tools
+# kdump-tools configuration
+# ---------------------------------------------------------------------------
+# USE_KDUMP - controls kdump will be configured
+#     0 - kdump kernel will not be loaded
+#     1 - kdump kernel will be loaded and kdump is configured
+#
+USE_KDUMP=1
+
+
+# ---------------------------------------------------------------------------
+# Kdump Kernel:
+# KDUMP_KERNEL - A full pathname to a kdump kernel.
+# KDUMP_INITRD - A full pathname to the kdump initrd (if used).
+#     If these are not set, kdump-config will try to use the current kernel
+#     and initrd if it is relocatable.  Otherwise, you will need to specify
+#     these manually.
+KDUMP_KERNEL=/var/lib/kdump/vmlinuz
+KDUMP_INITRD=/var/lib/kdump/initrd.img
+
+
+# ---------------------------------------------------------------------------
+# vmcore Handling:
+# KDUMP_COREDIR - local path to save the vmcore to.
+# KDUMP_FAIL_CMD - This variable can be used to cause a reboot or
+#     start a shell if saving the vmcore fails.  If not set, "reboot -f"
+#     is the default.
+#     Example - start a shell if the vmcore copy fails:
+#         KDUMP_FAIL_CMD="echo 'makedumpfile FAILED.'; /bin/bash; reboot -f"
+# KDUMP_DUMP_DMESG - This variable controls if the dmesg buffer is dumped.
+#     If unset or set to 1, the dmesg buffer is dumped. If set to 0, the dmesg
+#     buffer is not dumped.
+# KDUMP_NUM_DUMPS - This variable controls how many dump files are kept on
+#     the machine to prevent running out of disk space. If set to 0 or unset,
+#     the variable is ignored and no dump files are automatically purged.
+# KDUMP_COMPRESSION - Compress the dumpfile. No compression is used by default.
+#     Supported compressions: bzip2, gzip, lz4, xz
+KDUMP_COREDIR="/var/crash"
+#KDUMP_FAIL_CMD="reboot -f"
+#KDUMP_DUMP_DMESG=
+#KDUMP_NUM_DUMPS=
+#KDUMP_COMPRESSION=
+
+
+# ---------------------------------------------------------------------------
+# Makedumpfile options:
+# MAKEDUMP_ARGS - extra arguments passed to makedumpfile (8).  The default,
+#     if unset, is to pass '-c -d 31' telling makedumpfile to use compression
+#     and reduce the corefile to in-use kernel pages only.
+#MAKEDUMP_ARGS="-c -d 31"
+
+
+# ---------------------------------------------------------------------------
+# Kexec/Kdump args
+# KDUMP_KEXEC_ARGS - Additional arguments to the kexec command used to load
+#     the kdump kernel
+#     Example - Use this option on x86 systems with PAE and more than
+#     4 gig of memory:
+#         KDUMP_KEXEC_ARGS="--elf64-core-headers"
+# KDUMP_CMDLINE - The default is to use the contents of /proc/cmdline.
+#     Set this variable to override /proc/cmdline.
+# KDUMP_CMDLINE_APPEND - Additional arguments to append to the command line
+#     for the kdump kernel.  If unset, it defaults to
+#     "reset_devices systemd.unit=kdump-tools-dump.service nr_cpus=1 irqpoll usbcore.nousb"
+#KDUMP_KEXEC_ARGS=""
+#KDUMP_CMDLINE=""
+#KDUMP_CMDLINE_APPEND="reset_devices systemd.unit=kdump-tools-dump.service nr_cpus=1 irqpoll usbcore.nousb"
+
+# ---------------------------------------------------------------------------
+# Architecture specific Overrides:
+
+# ---------------------------------------------------------------------------
+# Remote dump facilities:
+# HOSTTAG - Select if hostname of IP address will be used as a prefix to the
+#           timestamped directory when sending files to the remote server.
+#           'ip' is the default.
+#HOSTTAG="hostname|[ip]"
+
+# NFS -     Hostname and mount point of the NFS server configured to receive
+#           the crash dump. The syntax must be {HOSTNAME}:{MOUNTPOINT}
+#           (e.g. remote:/var/crash)
+# NFS_TIMEO - Timeout before NFS retries a request. See man nfs(5) for details.
+# NFS_RETRANS - Number of times NFS client retries a request. See man nfs(5) for details.
+#NFS="<nfs mount>"
+#NFS_TIMEO="600"
+#NFS_RETRANS="3"
+
+# FTP - Hostname and path of the FTP server configured to receive the crash dump.
+#       The syntax is {HOSTNAME}[:{PATH}] with PATH defaulting to /.
+# FTP_USER - FTP username. A anonomous upload will be used if not set.
+# FTP_PASSWORD - password for the FTP user
+# FTP_PORT=21 - FTP port. Port 21 will be used by default.
+#FTP="<server>:<path>"
+#FTP_USER=""
+#FTP_PASSWORD=""
+#FTP_PORT=21
+
+# SSH - username and hostname of the remote server that will receive the dump
+#       and dmesg files.
+# SSH_KEY - Full path of the ssh private key to be used to login to the remote
+#           server. use kdump-config propagate to send the public key to the
+#           remote server
+#SSH="<user at server>"
+#SSH_KEY="<path>"
+
+$ cat /etc/init.d/kdump-tools
+#! /bin/sh
+
+### BEGIN INIT INFO
+# Provides:          kdump-tools
+# Required-Start:    $syslog $time $local_fs $remote_fs $network
+# Required-Stop:     $syslog
+# Default-Start:     2 3 4 5
+# Default-Stop:
+# Short-Description: kdump
+# Description:       init script to load a kdump kernel or save vmcores
+### END INIT INFO
+
+PATH=/bin:/usr/bin:/sbin:/usr/sbin
+NAME="kdump-tools"
+DESC="kdump-tools"
+export NAME
+
+. /lib/lsb/init-functions
+. /lib/init/vars.sh
+
+VMCORE_FILE=/proc/vmcore
+KDUMP_SCRIPT=/usr/sbin/kdump-config
+KDUMP_DEFAULTS=/etc/default/kdump-tools
+[ -r $KDUMP_DEFAULTS ] && . $KDUMP_DEFAULTS
+
+[ "$USE_KDUMP" -ne 0 ] || exit 0;
+
+case "$1" in
+  start)
+	#
+	# If we have a /proc/vmcore, then we just kdump'ed
+	#
+	if [ -e $VMCORE_FILE ] && [ -s $VMCORE_FILE ]; then
+		printf "Starting %s: " "$DESC"
+		if ! $KDUMP_SCRIPT savecore && [ -n "$KDUMP_FAIL_CMD" ] ; then
+			$KDUMP_FAIL_CMD ;
+		else
+			date -R ;
+			reboot -f ;
+		fi
+	#
+	# Else, we've just booted and need to load the kdump kernel
+	#
+	else
+		printf "Starting %s: " "$DESC"
+		$KDUMP_SCRIPT load
+	fi
+	;;
+  stop)
+	printf "Stopping %s: " "$DESC"
+	$KDUMP_SCRIPT unload
+	;;
+  status)
+	$KDUMP_SCRIPT status
+	;;
+  restart|force-reload)
+  	# alias the required 'force-reload' option
+	$KDUMP_SCRIPT unload
+	$KDUMP_SCRIPT load
+	;;
+  *)
+	echo "Usage: $0 {start|stop|status|restart|force-reload}"
+	exit 1
+esac
+
+exit 0
