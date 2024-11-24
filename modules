@@ -249,3 +249,9 @@ $ modprobe nvme
 install nvme
 $ lsmod | grep nvme
 $
+
+# To prevent Samsung nvme drives from binding to the nvme driver:
+#   This softdep will force vfio-pci driver to load if nvme is loaded
+softdep nvme pre: vfio-pci
+#   This options will map Samsung nvme drives to vfio-pci driver
+options vfio-pci ids=144d:ffffffff:ffffffff:ffffffff:00010802:ffffffff
