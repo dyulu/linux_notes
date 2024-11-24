@@ -1,0 +1,94 @@
+######## Create a digital certificate
+# Generate a 2048-bit RSA Private Key named private_key.pem
+$ openssl genrsa -out private_key.pem 2048
+
+# Generate a CSR, i.e., Certificate Signing Request, using the private key
+# Will be prompted to enter information, known as DN, i.e., Distinguished Name,
+# that will be incorporated into your certificate request such as
+#     the Common Name (domain name)
+#     organization
+#     country
+openssl req -new -key private_key.pem -out certificate.csr
+
+# Generate a Self-Signed Certificate using the CSR
+openssl x509 -signkey private_key.pem -in certificate.csr -req -days 365 -out certificate.crt
+
+######## Verify the Contents of the Certificate
+openssl x509 -text -noout -in certificate.crt
+
+# A self-signed certificate is not verified by a third-party CA, so it will not be trusted by default in browsers and other clients
+# For a production environment, need to obtain a certificate from a trusted CA, i.e., Certificate Authority
+
+# Check the notAfter date of a certificate.crt
+openssl x509 -enddate -noout -inform der -in certificate.crt
+
+# Check the notBefore date of a certificate.crt
+openssl x509 -startdate -noout -inform der -in certificate.crt
+
+# Example to check the validity period of a certificate
+$ openssl x509 -enddate -noout -inform der -in mycert.crt
+notAfter=Dec 29 23:59:00 2040 GMT
+$ openssl x509 -startdate -noout -inform der -in mycert.crt
+notBefore=Dec 29 19:19:52 2023 GMT
+
+# Verify the signature of a digital certificate
+# ca_certificate.pem:   the CA's certificate file; contains the public key needed to verify the signature
+# user_certificate.pem: the certificate file to be verified
+openssl verify -CAfile ca_certificate.pem user_certificate.pem
+
+# Validate the Certificate Chain
+# root.pem:         the root CA certificate
+# intermediate.pem: the intermediate CA certificate
+# end-entity.pem:   the end-entity certificate
+openssl verify -CAfile root.pem -untrusted intermediate.pem end-entity.pem
+
+# Verify the Certificate's Purpose
+#     Key Usage Extension: defines the purpose of the public key contained in the certificate
+#                          indicates whether the key can be used for digital signatures, non-repudiation, key encipherment, data encipherment,
+#                          key agreement, certificate signing, CRL signing, etc
+#    Extended Key Usage Extension: includes a list of one or more Object Identifiers (OIDs) that define specific application purposes for the certificate
+#                          Server Authentication (OID 1.3.6.1.5.5.7.3.1)
+#                          Client Authentication (OID 1.3.6.1.5.5.7.3.2)
+#                          Code Signing (OID 1.3.6.1.5.5.7.3.3)
+#                          Email Protection (OID 1.3.6.1.5.5.7.3.4)
+openssl x509 -text -noout -in certificate.pem
+# e.g.,
+#         X509v3 extensions:
+#            X509v3 Basic Constraints: 
+#                CA:FALSE
+#            X509v3 Key Usage: critical
+#                Digital Signature
+#            X509v3 Extended Key Usage: critical
+#                Code Signing
+
+######## Digital certificate format
+# PEM (Privacy Enhanced Mail)
+#   Extension: .pem, .crt, .cer, .key
+#   Contents: Base64 encoded DER certificate, enclosed between "-----BEGIN CERTIFICATE-----" and "-----END CERTIFICATE-----"
+#   Usage: Commonly used by web servers and software that require certificates, such as OpenSSL
+#   Support: Can contain only the certificate, or sometimes the private key or multiple certificates in a chain
+# DER (Distinguished Encoding Rules)
+#   Extension: .der or .cer
+#   Contents: Binary form of a certificate, instead of the Base64-encoded ASCII format
+#   Usage: Commonly used in Java-based applications and supported by Java's keytool utility
+#   Support: Typically used for a single certificate, not for a certificate chain
+
+######## Applications of digital certificate
+Email Encryption and Signing
+Code Signing
+Document Signing
+Secure File Transfer
+VPN Access
+Wireless Network Authentication
+Smart Card Authentication
+Internet of Things
+Blockchain and Cryptocurrency
+Client Authentication
+API Security
+Identity Verification
+Mobile Device Management
+Secure Shell (SSH) Authentication
+Machine-to-Machine (M2M) Communication
+Banking and Financial Transactions
+Government Services
+HTTPS
