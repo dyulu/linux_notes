@@ -1,0 +1,56 @@
+# CONFIG_FAULT_INJECTION_DEBUG_FS=y
+
+# Example fault injection on ext4 fs on /dev/nvme8n1
+mkfs.ext4 -F /dev/nvme8n1
+mount /dev/nvme8n1 /mnt
+mount -t debugfs none /sys/kernel/debug/
+
+$ ls /sys/kernel/debug/nvme8n1/fault_inject/
+dont_retry  probability  status       times    verbose_ratelimit_burst
+interval    space	 task-filter  verbose  verbose_ratelimit_interval_ms
+
+# Note: make sure no background operation IOs, e.g., journaling, cach flushing, etc, to interfere with the fault injection
+$ echo 1 > /sys/kernel/debug/nvme8n1/fault_inject/times; cp /afile /mnt
+cp: cannot stat '/mnt/afile': Input/output error
+
+$ for f in /sys/kernel/debug/nvme8n1/fault_inject/*; do [ -f "$f" ] && echo "==> Filename: $f <==" && cat "$f" && echo; done
+==> Filename: /sys/kernel/debug/nvme8n1/fault_inject/dont_retry <==
+Y
+
+==> Filename: /sys/kernel/debug/nvme8n1/fault_inject/interval <==
+1
+
+==> Filename: /sys/kernel/debug/nvme8n1/fault_inject/probability <==
+100
+
+==> Filename: /sys/kernel/debug/nvme8n1/fault_inject/space <==
+0
+
+==> Filename: /sys/kernel/debug/nvme8n1/fault_inject/status <==
+0x0001
+
+==> Filename: /sys/kernel/debug/nvme8n1/fault_inject/task-filter <==
+N
+
+==> Filename: /sys/kernel/debug/nvme8n1/fault_inject/times <==
+0
+
+==> Filename: /sys/kernel/debug/nvme8n1/fault_inject/verbose <==
+2
+
+==> Filename: /sys/kernel/debug/nvme8n1/fault_inject/verbose_ratelimit_burst <==
+10
+
+==> Filename: /sys/kernel/debug/nvme8n1/fault_inject/verbose_ratelimit_interval_ms <==
+0
+
+# dont_retry: If set, the device will not attempt to retry the operation after a fault is injected
+# probability: Controls the probability that a fault will be injected
+# status: Specifies the status code to be used when injecting a fault
+# times: Sets the number of times a fault will be injected before the fault injection mechanism stops
+# interval: Specifies the interval between fault injections; e.g., 2 means every second operation will be faulted
+# space: May control the amount of space or range within which faults can be injected
+# task-filter: May allow filtering which tasks (processes) will be affected by the fault injection
+# verbose: If set, additional debugging information will be printed to the kernel log when a fault is injected
+# verbose_ratelimit_burst: Controls the burst limit for verbose logging
+# verbose_ratelimit_interval_ms: Controls the interval for verbose logging rate limiting in milliseconds
