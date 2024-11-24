@@ -156,3 +156,184 @@ Host support.mycompany.com
     Port 443
     ServerAliveCountMax 20
     ServerAliveInterval 30
+
+
+
+######## Example user ansible on ssh server ########
+# User ansible home /root/, no password
+$ cat /etc/passwd | grep ansible
+ansible:x:0:60085::/root:/bin/bash
+$ cat /etc/shadow | grep ansible
+ansible:!:19407::::::
+$ ls -lart /root | grep ssh
+drwxr-xr-x  2 root root   60 Jan 24 18:08 .ssh
+$ ls -lart /root/.ssh | grep auth
+-rw-r--r-- 1 root root 421 Jan 24 18:08 authorized_keys
+$ systemctl is-active sshd
+active
+
+#### When the home directory /root/.ssh/ on ssh server is wide open (777), it doesn't try the rsa key:
+# On ssh client
+$ ssh -v -o StrictHostKeyChecking=no -o PasswordAuthentication=no ansible@host_ip
+...
+debug1: Authentications that can continue: publickey,password
+debug1: Next authentication method: publickey
+debug1: Trying private key: /home/dyulu/.ssh/id_rsa
+debug1: Authentications that can continue: publickey,password
+debug1: No more authentication methods to try.
+-o StrictHostKeyChecking=no -o PasswordAuthentication=no ansible@host_ip: Permission denied (publickey,password).
+...
+# On ssh server:
+#     localhost sshd[2276123]: Authentication refused: bad ownership or modes for directory /root/.ssh
+#     localhost sshd[2276123]: Connection closed by authenticating user ansible [ssh-client-ip] port 58368 [preauth]
+
+#### With /root/.ssh/ set to 755 and authorized_keys set to 777
+# On ssh client, same as above
+# On ssh server:
+#     localhost sshd[2281545]: Authentication refused: bad ownership or modes for file /root/.ssh/authorized_keys
+#     localhost sshd[2281545]: Connection closed by authenticating user ansible [ssh-client-ip] port 35080 [preauth]
+
+#### With /root/.ssh/ set to 755 and no authorized_keys file; or no /root/.ssh directory at all
+# On ssh client, same as above
+# On ssh server:
+#     localhost sshd[2284838]: Connection closed by authenticating user ansible [ssh-client-ip] port 33068 [preauth]
+
+#### With the home directory permissions set correctly (755) and authorized_keys (644):
+# On ssh client
+# ssh -v -o StrictHostKeyChecking=no -o PasswordAuthentication=no ansible@host_ip
+...
+debug1: Authentications that can continue: publickey,password
+debug1: Next authentication method: publickey
+debug1: Trying private key:: /home/dyulu/.ssh/id_rsa
+debug1: Authentication succeeded (publickey).
+# On ssh server:
+#     localhost sshd[2231609]: Accepted publickey for ansible from [ssh-client-ip] port 37252 ssh2: RSA SHA256:Jo9HpYCEZQd7PbJNM4sEZ+wjRH905p7UTJLOvE/O3GQ
+#     localhost sshd[2231609]: pam_unix(sshd:session): session opened for user ansible(uid=0) by (uid=0)
+# On ssh client: exit
+# On ssh server:
+#     localhost sshd[2231609]: Received disconnect from [ssh-client-ip] port 37252:11: disconnected by user
+#     localhost sshd[2231609]: Disconnected from user ansible [ssh-client-ip] port 37252
+#     pam_unix(sshd:session): session closed for user ansible
+
+#### Change PubkeyAuthentication to no and restart sshd
+# On ssh server
+$ sshd -T | grep -i pubkeyauth
+pubkeyauthentication no
+pubkeyauthoptions none
+
+# On ssh client
+# ssh -v -o StrictHostKeyChecking=no -o PasswordAuthentication=no ansible@host_ip
+...
+debug1: Authentications that can continue: password
+debug1: No more authentication methods to try.
+-o StrictHostKeyChecking=no -o PasswordAuthentication=no ansible@host_ip: Permission denied (password).
+# On ssh server:
+#     localhost sshd[2964236]: Connection closed by authenticating user ansible [ssh-client-ip] port 42724 [preauth]
+
+#### If rsa-sha2-512 not in PubkeyAcceptedKeyTypes
+# On ssh server
+$ grep -i pubkey /etc/ssh/sshd_config
+#PubkeyAuthentication yes
+pubkeyacceptedkeytypes ecdsa-sha2-nistp256-cert-v01@openssh.com,ecdsa-sha2-nistp384-cert-v01@openssh.com
+$ sshd -T | grep -i pubkey
+pubkeyauthentication yes
+pubkeyacceptedkeytypes ecdsa-sha2-nistp256-cert-v01@openssh.com,ecdsa-sha2-nistp384-cert-v01@openssh.com
+pubkeyauthoptions none
+
+# On ssh client
+# ssh -v -o StrictHostKeyChecking=no -o PasswordAuthentication=no ansible@host
+...
+debug1: Authentications that can continue: publickey,password
+debug1: Next authentication method: publickey
+debug1: Trying private key: /u/dyulu/.ssh/id_rsa
+debug1: Authentications that can continue: publickey,password
+debug1: No more authentication methods to try.
+-o StrictHostKeyChecking=no -o PasswordAuthentication=no ansible@host_ip: Permission denied (publickey,password)
+# On ssh server:
+#     localhost sshd[658503]: userauth_pubkey: key type ssh-rsa not in PubkeyAcceptedKeyTypes [preauth]
+#     localhost sshd[658503]: Connection closed by authenticating user ansible [ssh-client-ip] port 45850 [preauth]
+
+#### /etc/ssh/sshd_config: pubkeyacceptedkeytypes setting
+# rsa-sha2-512: works
+#     Accepted publickey for ansible from [ssh-client-ip] port 38486 ssh2: RSA SHA256:Jo9HpYCEZQd7PbJNM4sEZ+wjRH905p7UTJLOvE/O3GQ
+#     pam_unix(sshd:session): session opened for user ansible(uid=0) by (uid=0)
+# rsa-sha2-256 or ssh-rsa: does not work
+#     userauth_pubkey: key type ssh-rsa not in PubkeyAcceptedKeyTypes [preauth]
+#     Connection closed by authenticating user ansible [ssh-client-ip] port 56344 [preauth]
+## On ssh server running kernel 5.10
+## OpenSSH_8.4p1 Debian-5+deb11u2, OpenSSL 1.1.1w  11 Sep 2023
+$ grep -i pubkey /etc/ssh/sshd_config
+#PubkeyAuthentication yes
+pubkeyacceptedkeytypes rsa-sha2-512
+$ sshd -T | grep -i pubkey
+pubkeyauthentication yes
+pubkeyacceptedkeytypes rsa-sha2-512
+pubkeyauthoptions none
+## On ssh server running kernel 6.1: it is pubkeyacceptedalgorithms in sshd -T output
+## OpenSSH_9.2p1 Debian-2+deb12u2, OpenSSL 3.0.11 19 Sep 2023
+# rsa-sha2-512: works
+#     Accepted publickey for ansible from [ssh-client-ip] port 38486 ssh2: RSA SHA256:Jo9HpYCEZQd7PbJNM4sEZ+wjRH905p7UTJLOvE/O3GQ
+#     pam_unix(sshd:session): session opened for user ansible(uid=0) by (uid=0)
+#     pam_env(sshd:session): deprecated reading of user environment enabled
+# rsa-sha2-256 or ssh-rsa: does not work
+#     userauth_pubkey: signature algorithm rsa-sha2-512 not in PubkeyAcceptedAlgorithms [preauth]
+#     Connection closed by authenticating user ansible [ssh-client-ip] port 59072 [preauth]
+$ grep -i pubkey /etc/ssh/sshd_config
+#PubkeyAuthentication yes
+pubkeyacceptedkeytypes rsa-sha2-512
+$ sshd -T | grep -i pubkey
+pubkeyauthentication yes
+pubkeyacceptedalgorithms rsa-sha2-512
+pubkeyauthoptions none
+
+#### If network is down on ssh server
+# On ssh client
+# ssh -v -o StrictHostKeyChecking=no -o PasswordAuthentication=no ansible@host_ip
+...
+debug1: connect to address [host_ip] port 22: Connection timed out
+ssh: connect to host [host_ip] port 22: Connection timed out
+
+
+# https://security.stackexchange.com/questions/270349/understanding-ssh-rsa-not-in-pubkeyacceptedalgorithms
+# key type ssh-rsa:            in the first column of authorized_keys file
+#                              RSA keys are perfectly fine and widely supported
+# signature algorithm ssh-rsa: RSA signatures using the SHA-1 hash algorithm
+#                              Since SHA-1 is insecure, OpenSSH disables the ssh-rsa signature algorithm since version 8.8
+# SSH clients and servers are now expected to use rsa-sha2-256 (RSA signatures with SHA-256) or rsa-sha2-512 (RSA signatures with SHA-512)
+#### When ssh client uses old client like OpenSSH_6.8p1, OpenSSL 1.0.2g  1 Mar 2016
+# On ssh server running 8.8 and above
+#     userauth_pubkey: signature algorithm ssh-rsa not in PubkeyAcceptedAlgorithms [preauth]
+#     Connection closed by authenticating user ansible [ssh-client-ip] port 50412 [preauth]
+# Solutions:
+#     Update the SSH client, so that the newer signature algorithms can be used
+#     Create a new SSH key with the ECDSA type (e. g. ecdsa-sha2-nistp256) or EdDSA rather than RSA
+#         Circumvent the signature algorithm problem
+#     Last resort is to enable the ssh-rsa signature algorithm on the server by adding it to PubkeyAcceptedAlgorithms
+#         Security risk
+
+#### Detect ssh server identity change:
+# On ssh client:
+#     ~/.ssh/            700 (drwx------)
+#     ~/.ssh/config      600 (-rw-------)
+#     ~/.ssh/known_hosts 600 (-rw-------)
+# Entry format: [ssh_server_name|ssh_server_ip|hashed_server_name_or_ip] ssh_server_HostKey_or_ssh_fingerprint
+# ssh client config option order:
+#     1. command line options
+#     2. user-specific file:  ~/.ssh/config
+#     3. system-wide file:    /etc/ssh/ssh_config
+#     HashKnownHosts yes      # hash host names and addresses when they are added to ~/.ssh/known_hosts
+ssh-keygen -H: convert an existing known_hosts file to hashed form
+ssh-keygen -F: search a known_hosts file for a particular hostname
+ssh-keygen -R: remove individual entries from the file
+# How to check your SSH key fingerprint: on ssh server
+$ sshd -T | grep -i hash
+fingerprinthash SHA256
+$  sshd -T | grep -i hostkey
+hostkeyagent none
+hostkeyalgorithms ecdsa-sha2-nistp256-cert-v01@openssh.com,ecdsa-sha2-nistp384-cert-v01@openssh.com,ecdsa-sha2-nistp521-cert-v01@openssh.com,sk-ecdsa-sha2-nistp256-cert-v01@openssh.com,ssh-ed25519-cert-v01@openssh.com,sk-ssh-ed25519-cert-v01@openssh.com,rsa-sha2-512-cert-v01@openssh.com,rsa-sha2-256-cert-v01@openssh.com,ssh-rsa-cert-v01@openssh.com,ecdsa-sha2-nistp256,ecdsa-sha2-nistp384,ecdsa-sha2-nistp521,sk-ecdsa-sha2-nistp256@openssh.com,ssh-ed25519,sk-ssh-ed25519@openssh.com,rsa-sha2-512,rsa-sha2-256,ssh-rsa
+hostkey /etc/ssh/ssh_host_rsa_key
+hostkey /etc/ssh/ssh_host_ecdsa_key
+hostkey /etc/ssh/ssh_host_ed25519_key
+# For ECDSA key with SHA256 hash algorithm:
+$ ssh-keygen -lf /etc/ssh/ssh_host_ecdsa_key.pub
+256 SHA256:agagQthdSMNzfQ/mxDiIMBVTg5uyI/U99kQ+Nqu1UwQ root@5acdff85d733 (ECDSA)
