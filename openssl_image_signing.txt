@@ -1,0 +1,37 @@
+# Image signing: apply a digital signature to verify the authenticity and integrity of the image
+# Methods:
+#     external signatures: store digital signatures separately from the image file itself
+#     internal signatures, i.e., embedded signatures: insert digital signature directly into the image file
+
+######## An external signature example:
+#### Create the signature using OpenSSL with RSA keys
+# Generate a hash (digest) of the image
+openssl dgst -sha256 -binary image.png > hash.bin
+
+# Sign the hash with your private key to create the signature
+openssl rsautl -sign -inkey private_key.pem -keyform PEM -in hash.bin > signature.bin
+
+#### Verify the signature: need original image, signature file, and public key corresponding to the private key used to sign the image
+# First, decrypt the signature to produce the original hash
+openssl rsautl -verify -inkey public_key.pem -pubin -in signature.bin > hash_decrypted.bin
+
+# Then, generate the hash of the image again
+openssl dgst -sha256 -binary image.png > hash.bin
+
+# Compare the decrypted hash with the newly generated hash
+# If the hashes match, the signature is valid, and the image has not been tampered with
+cmp hash_decrypted.bin hash.bin
+
+######## An internal signature example:
+# Can be done in a way that does not affect the display of the image
+#     by taking advantage of metadata fields or appending data in a manner that image viewers ignore
+#### Create the signature the same way as above and then
+# Embed the signature in the image's Exif metadata
+exiftool -signature="$(base64 signature.bin)" image.png
+
+#### Extract the signature from the image and then verify the signature the same way as above
+# Extract the signature from the image
+signature=$(exiftool -signature image.png | grep -Po '(?<=: ).*')
+
+# Decode the signature from base64
+echo "$signature" | base64 --decode > signature.bin
