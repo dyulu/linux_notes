@@ -1,0 +1,236 @@
+# Clear buffer
+dmesg --clear        # -C, clear buffer without read
+dmesg --read-clear   # -c
+
+# Turn on coloring
+# /etc/terminal-colors.d/
+dmesg --color=always
+
+# Enable human-readable output: --human
+#     output in 'dmesg -less' format
+#     show a timestamp with the date and time, with a minute resolution
+#     messages in that minute are labeled with the seconds and nanoseconds from the start of that minute
+dmesg -H
+
+# Enable human-readable timestamp: --ctime
+#     timestamps are rendered as standard dates and times, but the resolution is lowered to a minute
+dmesg -T
+
+# Watch live events:
+dmesg --follow          # -w
+dmesg --folow-new       # -W
+
+# Show timestamp and time delta: --show-delta
+dmesg -d
+dmesg --reltime
+
+# Show time delta only: --notime
+dmesg -d -t
+
+# Turn on/off console printing
+dmesg --console-level 7        # -n
+dmesg --console-on             # -E
+dmesg --console-off            # -D
+
+# Filter by loglevel
+#    emerg: System is unusable.
+#    alert: Action must be taken immediately.
+#    crit: Critical conditions.
+#    err: Error conditions.
+#    warn: Warning conditions.
+#    notice: Normal but significant condition.
+#    info: Informational.
+#    debug: Debug-level messages.
+dmesg --level=err,warn
+
+# Filter by facility
+#    kern: Kernel messages.
+#    user: User-level messages.
+#    mail: Mail system.
+#    daemon: System daemons.
+#    auth: Security/authorization messages.
+#    syslog: Internal syslogd messages.
+#    lpr: Line printer subsystem.
+#    news: Network news subsystem.
+dmesg -f daemon
+
+# Decode message by facility and loglevel: --decode
+dmesg -x
+
+# Filter by time
+dmesg --since time
+dmesg --until time
+
+######## dmesg: print or control the kernel ring buffer
+-C, --clear
+   Clear the ring buffer.
+
+-c, --read-clear
+   Clear the ring buffer after first printing its contents.
+
+-D, --console-off
+   Disable the printing of messages to the console.
+
+-d, --show-delta
+   Display the timestamp and the time delta spent between messages. If
+   used together with --notime then only the time delta without the
+   timestamp is printed.
+
+-E, --console-on
+   Enable printing messages to the console.
+
+-e, --reltime
+   Display the local time and the delta in human-readable format. Be
+   aware that conversion to the local time could be inaccurate (see -T
+   for more details).
+
+-F, --file file
+   Read the syslog messages from the given file. Note that -F does not
+   support messages in kmsg format. The old syslog format is supported
+   only.
+
+-f, --facility list
+   Restrict output to the given (comma-separated) list of facilities.
+   For example:
+
+   dmesg --facility=daemon
+
+   will print messages from system daemons only. For all supported
+   facilities see the --help output.
+
+-H, --human
+   Enable human-readable output. See also --color, --reltime and
+   --nopager.
+
+-J, --json
+   Use JSON output format. The time output format is in "sec.usec"
+   format only, log priority level is not decoded by default (use
+   --decode to split into facility and priority), the other options to
+   control the output format or time format are silently ignored.
+
+-k, --kernel
+   Print kernel messages.
+
+-L, --color[=when]
+   Colorize the output. The optional argument when can be auto, never
+   or always. If the when argument is omitted, it defaults to auto.
+   The colors can be disabled; for the current built-in default see
+   the --help output. See also the COLORS section below.
+
+-l, --level list
+   Restrict output to the given (comma-separated) list of levels. For
+   example:
+
+   dmesg --level=err,warn
+
+   will print error and warning messages only. For all supported
+   levels see the --help output.
+
+-n, --console-level level
+   Set the level at which printing of messages is done to the console.
+   The level is a level number or abbreviation of the level name. For
+   all supported levels see the --help output.
+
+   For example, -n 1 or -n emerg prevents all messages, except
+   emergency (panic) messages, from appearing on the console. All
+   levels of messages are still written to /proc/kmsg, so syslogd(8)
+   can still be used to control exactly where kernel messages appear.
+   When the -n option is used, dmesg will not print or clear the
+   kernel ring buffer.
+
+--noescape
+   The unprintable and potentially unsafe characters (e.g., broken
+   multi-byte sequences, terminal controlling chars, etc.) are escaped
+   in format \x<hex> for security reason by default. This option
+   disables this feature at all. It’s usable for example for debugging
+   purpose together with --raw. Be careful and don’t use it by
+   default.
+
+-P, --nopager
+   Do not pipe output into a pager. A pager is enabled by default for
+   --human output.
+
+-p, --force-prefix
+   Add facility, level or timestamp information to each line of a
+   multi-line message.
+
+-r, --raw
+   Print the raw message buffer, i.e., do not strip the log-level
+   prefixes, but all unprintable characters are still escaped (see
+   also --noescape).
+
+   Note that the real raw format depends on the method how dmesg reads
+   kernel messages. The /dev/kmsg device uses a different format than
+   syslog(2). For backward compatibility, dmesg returns data always in
+   the syslog(2) format. It is possible to read the real raw data from
+   /dev/kmsg by, for example, the command 'dd if=/dev/kmsg
+   iflag=nonblock'.
+
+-S, --syslog
+   Force dmesg to use the syslog(2) kernel interface to read kernel
+   messages. The default is to use /dev/kmsg rather than syslog(2)
+   since kernel 3.5.0.
+
+-s, --buffer-size size
+   Use a buffer of size to query the kernel ring buffer. This is 16392
+   by default. (The default kernel syslog buffer size was 4096 at
+   first, 8192 since 1.3.54, 16384 since 2.1.113.) If you have set the
+   kernel buffer to be larger than the default, then this option can
+   be used to view the entire buffer.
+
+-T, --ctime
+   Print human-readable timestamps.
+
+   Be aware that the timestamp could be inaccurate! The time source
+   used for the logs is not updated after system SUSPEND/RESUME.
+   Timestamps are adjusted according to current delta between boottime
+   and monotonic clocks, this works only for messages printed after
+   last resume.
+
+--since time
+   Display record since the specified time. The time is possible to
+   specify in absolute way as well as by relative notation (e.g. '1
+   hour ago'). Be aware that the timestamp could be inaccurate and see
+   --ctime for more details.
+
+--until time
+   Display record until the specified time. The time is possible to
+   specify in absolute way as well as by relative notation (e.g. '1
+   hour ago'). Be aware that the timestamp could be inaccurate and see
+   --ctime for more details.
+
+-t, --notime
+   Do not print kernel’s timestamps.
+
+--time-format format
+   Print timestamps using the given format, which can be ctime,
+   reltime, delta or iso. The first three formats are aliases of the
+   time-format-specific options. The iso format is a dmesg
+   implementation of the ISO-8601 timestamp format. The purpose of
+   this format is to make the comparing of timestamps between two
+   systems, and any other parsing, easy. The definition of the iso
+   timestamp is: YYYY-MM-DD<T>HH:MM:SS,<microseconds>←+><timezone
+   offset from UTC>.
+
+   The iso format has the same issue as ctime: the time may be
+   inaccurate when a system is suspended and resumed.
+
+-u, --userspace
+   Print userspace messages.
+
+-w, --follow
+   Wait for new messages. This feature is supported only on systems
+   with a readable /dev/kmsg (since kernel 3.5.0).
+
+-W, --follow-new
+   Wait and print only new messages.
+
+-x, --decode
+   Decode facility and level (priority) numbers to human-readable
+   prefixes.
+
+-h, --help
+   Display help text and exit.
+
+-V, --version
+   Print version and exit.
